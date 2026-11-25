@@ -65,6 +65,17 @@ ok(P.kindOf('saved_posts.html') === 'html', 'kindOf html export');
 ok(P.kindOf('media/posts/abc.jpg') === '', 'ignores media');
 ok(P.sniff(saved) === 'saved' && P.sniff(followers) === 'followers' && P.sniff(cols) === 'cols', 'sniff by content');
 
+// Captions (newer exports): string_map_data and label_values styles; a one-word caption must not become the author
+const capA = {saved_saved_media: [{title: 'pasta.queen', string_map_data: {'Saved on': {href: 'https://www.instagram.com/p/CapAAAAA11/', timestamp: 1}, Caption: {value: 'Garlic  chili\nnoodles \u00f0\u009f\u008d\u009c'}}}]};
+r = P.parseSaved(capA);
+ok(r[0].cap === 'Garlic chili noodles \u{1F35C}' && r[0].author === 'pasta.queen', 'caption from string_map_data: ' + JSON.stringify(r[0].cap));
+const capB = {saved_saved_media: [{timestamp: 2, label_values: [{label: 'Caption', value: 'yum'}, {label: 'URL', value: 'https://www.instagram.com/reel/CapBBBBB22/'}, {label: 'Username', value: 'chef.kai'}]}]};
+r = P.parseSaved(capB);
+ok(r[0].cap === 'yum' && r[0].author === 'chef.kai', 'caption from label_values, author kept');
+const capC = {saved_saved_media: [{timestamp: 3, label_values: [{label: 'Caption', value: 'yum'}, {label: 'URL', value: 'https://www.instagram.com/p/CapCCCCC33/'}]}]};
+ok(P.parseSaved(capC)[0].author === '', 'one-word caption is not used as the author');
+ok(P.parseSaved(saved)[0].cap === '', 'no caption when the export has none');
+
 // Pipeline
 const res = P.newImport(); P.addParsed(res, 'saved', saved); P.addParsed(res, 'followers', followers); P.addParsed(res, 'followers', followers);
 ok(res.saved.length === 2 && res.followers.length === 2 && res.files === 3, 'addParsed accumulates split follower files');

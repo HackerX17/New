@@ -22,16 +22,19 @@ Organize everything you've saved on Instagram into boards, and turn the sorting 
 
 Instagram doesn't let apps read your saved posts directly, so Savepoint uses the download Instagram gives you:
 
-1. In the Instagram app, open your profile, tap the menu and choose **Accounts Center**.
-2. Tap **Your information and permissions**, then **Download your information**.
-3. Choose **Download or transfer information**, pick your account, then **Some of your information**.
-4. Tick **Saved**, **Likes** and **Followers and following**.
-5. Choose **Download to device**, date range **All time**, format **JSON**, then **Create files**.
-6. When Instagram emails you, download the ZIP and drop it into Savepoint's **Import & data** page.
+1. In the Instagram app, go to your profile and tap the menu (three lines, top right) to open **Settings and activity**.
+2. Tap **Meta Account**, the first item under "Your account". Older versions call it **Accounts Center**.
+3. Tap **Your information and permissions**, then **Export your information**. Older versions call it **Download your information**.
+4. Tap **Create export**, pick your Instagram profile, then **Export to device**.
+5. Tap **Customize information**. Everything starts ticked, so clear it all and tick only **Saved**, **Likes** and **Followers and following**.
+6. Set **Date range** to **All time** and **Format** to **JSON**, then tap **Start export**.
+7. When Instagram says it's ready, go back to **Export your information**, tap **Download**, and drop the ZIP into Savepoint's **Import & data** page. The link expires after a few days.
 
-For very large downloads, unzip the file and use **Choose an unzipped folder** instead. You can also paste individual post or reel links.
+"Archiving and downloading" in Settings is a different feature that saves your own photos; it isn't this export.
 
-The export has no images of other people's posts, so each save gets a generated cover from its creator's name. Use **Open on Instagram** to see the post itself.
+For very large downloads, unzip the file on a computer and use **Choose an unzipped folder** instead. You can also paste individual post or reel links.
+
+The export has no images of other people's posts, so each save gets a generated cover from its creator's name. When the export includes post captions, Savepoint shows them on each save and searches them. Use **Open on Instagram** to see the post itself.
 
 ## Privacy
 

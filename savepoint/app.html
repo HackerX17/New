@@ -192,6 +192,8 @@ main{padding-block:20px 120px;padding-left:max(16px,env(safe-area-inset-left,0px
 .cmeta,.ctags{display:flex;flex-direction:column;gap:2px;padding:0 4px}
 .ctags{flex-direction:row;flex-wrap:wrap;gap:5px}
 .handle{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cnote.cap{font-style:italic}
+.capq{display:grid;gap:4px;margin:0;padding:10px 14px;border-radius:12px;background:var(--panel2);font-size:14.5px;color:var(--ink)}
 .cnote{padding:0 4px;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .st{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .st-done{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 50%,transparent)}
@@ -465,20 +467,28 @@ function entriesOf(j) {
   return [];
 }
 function scan(node) {
-  const o = {urls: [], ts: [], names: [], labels: {}};
+  const o = {urls: [], ts: [], names: [], labels: {}, caption: ''};
   const walk = (x, k) => {
     if (x == null) return;
     if (typeof x === 'string') { if (/^https?:\/\//i.test(x)) o.urls.push(x); else if (k === 'value' || k === 'title' || k === 'name') o.names.push({k, v: x}); return; }
     if (typeof x === 'number') { if (/time|date/i.test(k)) o.ts.push(x); return; }
     if (Array.isArray(x)) { for (const y of x) walk(y, k); return; }
     if (typeof x === 'object') {
-      if (typeof x.label === 'string' && 'value' in x) o.labels[x.label.toLowerCase()] = x.value;
-      for (const [kk, v] of Object.entries(x)) walk(v, kk);
+      if (typeof x.label === 'string' && 'value' in x) {
+        const lb = x.label.toLowerCase();
+        if (/caption|description/.test(lb)) { if (typeof x.value === 'string' && !o.caption) o.caption = x.value; return; }
+        o.labels[lb] = x.value;
+      }
+      for (const [kk, v] of Object.entries(x)) {
+        if (/caption|description/i.test(kk)) { const c = typeof v === 'string' ? v : (v && typeof v.value === 'string' ? v.value : ''); if (c && !o.caption) o.caption = c; continue; }
+        walk(v, kk);
+      }
     }
   };
   walk(node, '');
   return o;
 }
+const capOf = sc => fixText(sc.caption || '').replace(/\s+/g, ' ').trim().slice(0, 160);
 function postFrom(url) { const m = String(url).match(POST_RE); return m ? {id: m[2], type: /^(reels?|tv)$/i.test(m[1]) ? 'reel' : 'post'} : null; }
 function userFromUrl(url) {
   const m = String(url).match(/instagram\.com\/(?:_u\/)?([A-Za-z0-9._]{1,30})\/?(?:[?#]|$)/i);
@@ -499,7 +509,7 @@ function parseSaved(j) {
   const out = [];
   for (const e of entriesOf(j)) {
     const sc = scan(e); const url = sc.urls.find(u => POST_RE.test(u)); if (!url) continue;
-    out.push({...postFrom(url), author: authorOf(e, sc, url), ts: normTs(sc.ts[0])});
+    out.push({...postFrom(url), author: authorOf(e, sc, url), ts: normTs(sc.ts[0]), cap: capOf(sc)});
   }
   return out;
 }
@@ -529,7 +539,7 @@ function colItem(e, url, col, skipTitle = true) {
   const smd = e && e.string_map_data; const nm = smd && (smd.Name || smd.name);
   let author = nm && nm.href && cleanUser(nm.value) || '';
   if (!author) author = authorOf(e, sc, url, skipTitle);
-  return {...p, author, ts: normTs(sc.ts[0]), col};
+  return {...p, author, ts: normTs(sc.ts[0]), col, cap: capOf(sc)};
 }
 function parseCollections(j) {
   const out = []; let cur = '';
@@ -610,7 +620,7 @@ const SKINS = [
 ];
 const G0 = () => ({xp: 0, streak: 0, bestStreak: 0, lastDay: '', bestSprint: 0, bestCombo: 0, c: {filed: 0, notes: 0, rated: 0, tagged: 0, done: 0, labeled: 0, flash: 0, letgo: 0}, ach: {}});
 const blank = () => ({mode: 'real', items: new Map(), boards: [], rules: {}, people: new Map(), liked: null, importedAt: 0});
-const newItem = p => ({id: p.id, author: p.author || '', type: p.type || 'post', savedAt: p.ts || 0, cols: [], board: null, tags: [], note: '', rating: 0, status: '', letGo: false, filedAt: 0});
+const newItem = p => ({id: p.id, author: p.author || '', type: p.type || 'post', savedAt: p.ts || 0, cap: p.cap || '', cols: [], board: null, tags: [], note: '', rating: 0, status: '', letGo: false, filedAt: 0});
 const newPerson = u => ({u, fo: 0, fr: 0, uf: 0, cf: false, labels: [], rv: false});
 let S = null, G = null;
 const UI = {q: '', filter: 'all', fboard: '', sort: 'new', shown: 60, view: 'grid', selecting: false, sel: new Set(), drawer: null, drawerList: null,
@@ -758,10 +768,10 @@ const Store = {
 const enc = it => {
   const o = {i: it.id, a: it.author, t: it.type === 'reel' ? 'r' : 'p', s: it.savedAt};
   if (it.cols.length) o.c = it.cols; if (it.board) o.b = it.board; if (it.tags.length) o.g = it.tags; if (it.note) o.n = it.note;
-  if (it.rating) o.r = it.rating; if (it.status) o.st = it.status; if (it.letGo) o.x = 1; if (it.filedAt) o.f = it.filedAt;
+  if (it.cap) o.cp = it.cap; if (it.rating) o.r = it.rating; if (it.status) o.st = it.status; if (it.letGo) o.x = 1; if (it.filedAt) o.f = it.filedAt;
   return o;
 };
-const dec = o => ({id: o.i, author: o.a || '', type: o.t === 'r' ? 'reel' : 'post', savedAt: o.s || 0, cols: o.c || [], board: o.b || null, tags: o.g || [], note: o.n || '', rating: o.r || 0, status: o.st || '', letGo: !!o.x, filedAt: o.f || 0});
+const dec = o => ({id: o.i, author: o.a || '', type: o.t === 'r' ? 'reel' : 'post', savedAt: o.s || 0, cap: o.cp || '', cols: o.c || [], board: o.b || null, tags: o.g || [], note: o.n || '', rating: o.r || 0, status: o.st || '', letGo: !!o.x, filedAt: o.f || 0});
 const encP = p => { const o = {u: p.u}; if (p.fo) o.fo = p.fo; if (p.fr) o.fr = p.fr; if (p.uf) o.uf = p.uf; if (p.cf) o.cf = 1; if (p.labels.length) o.l = p.labels; if (p.rv) o.rv = 1; return o; };
 const decP = o => ({u: o.u, fo: o.fo || 0, fr: o.fr || 0, uf: o.uf || 0, cf: !!o.cf, labels: o.l || [], rv: !!o.rv});
 const encMeta = () => ({v: 1, mode: 'real', boards: S.boards, rules: Object.entries(S.rules).map(([a, b]) => ({a, b})), liked: S.liked, importedAt: S.importedAt, game: G});
@@ -825,6 +835,8 @@ function makeDemo() {
     if (it.board && R() < .35) it.rating = 3 + Math.floor(R() * 3);
     if (it.board === 'bRec' && R() < .4) it.status = R() < .5 ? 'done' : 'try';
     if (it.board && NOTES[cat].length && R() < .3) it.note = NOTES[cat][Math.floor(R() * NOTES[cat].length)];
+    const CAPS = {food: ['The 15-minute dinner I make every week', 'Save this for meal prep Sunday', 'Crispy edges, no oven needed'], travel: ['Hidden beach you can only reach by boat', '48 hours in Lisbon, every stop'], fitness: ['5 moves for a stiff lower back', 'No-equipment leg day'], funny: ['he really thought nobody saw that', 'my last brain cell at 3am'], tech: ['Building a split keyboard from scratch'], home: ['Renter-friendly shelf hack']};
+    if (!it.note && CAPS[cat] && R() < .45) it.cap = CAPS[cat][Math.floor(R() * CAPS[cat].length)];
     st.items.set(id, it);
   }
   st.rules = {'saucebossrecipes': 'bRec'};
@@ -984,7 +996,7 @@ function filtered() {
     if (f === 'starred' && it.rating < 4) continue;
     if (f === 'try' && it.status !== 'try' && it.status !== 'doing') continue;
     if (f === 'done' && it.status !== 'done') continue;
-    if (q) { const b = boardById(it.board); if (!(it.author.includes(q) || it.note.toLowerCase().includes(q) || it.tags.some(t => t.includes(q)) || it.cols.some(c => c.toLowerCase().includes(q)) || (b && b.name.toLowerCase().includes(q)))) continue; }
+    if (q) { const b = boardById(it.board); if (!(it.author.includes(q) || it.note.toLowerCase().includes(q) || it.cap.toLowerCase().includes(q) || it.tags.some(t => t.includes(q)) || it.cols.some(c => c.toLowerCase().includes(q)) || (b && b.name.toLowerCase().includes(q)))) continue; }
     arr.push(it);
   }
   const s = UI.sort;
@@ -997,11 +1009,11 @@ function coverHTML(it, big, extra = '') {
 }
 function cardHTML(it) {
   const b = boardById(it.board), sel = UI.selecting, on = UI.sel.has(it.id);
-  const label = `@${it.author || 'unknown'}, ${it.type}, saved ${fmtD(it.savedAt)}, ${b ? 'in ' + b.name : 'unsorted'}${it.note ? ', ' + it.note : ''}`;
+  const label = `@${it.author || 'unknown'}, ${it.type}, saved ${fmtD(it.savedAt)}, ${b ? 'in ' + b.name : 'unsorted'}${it.note ? ', ' + it.note : it.cap ? ', ' + it.cap : ''}`;
   return `<button class="card${on ? ' on' : ''}" data-act="${sel ? 'toggle-sel' : 'open-item'}" data-id="${esc(it.id)}" ${sel ? `aria-pressed="${on}"` : ''} aria-label="${esc(label)}">
 ${coverHTML(it)}<span class="cmeta"><span class="handle">@${esc(it.author || 'unknown')}</span><span class="xs dim">${fmtD(it.savedAt)}</span></span>
 <span class="ctags">${b ? `<span class="bchip" style="--c:var(--b${b.color})">${esc(b.name)}</span>` : '<span class="bchip none">Unsorted</span>'}${it.status ? `<span class="st st-${it.status}">${STATUS_NAME[it.status]}</span>` : ''}</span>
-${it.note ? `<span class="cnote">${esc(it.note)}</span>` : ''}${sel ? `<span class="tick" aria-hidden="true">${ic('check')}</span>` : ''}</button>`;
+${it.note ? `<span class="cnote">${esc(it.note)}</span>` : it.cap ? `<span class="cnote cap">${esc(it.cap)}</span>` : ''}${sel ? `<span class="tick" aria-hidden="true">${ic('check')}</span>` : ''}</button>`;
 }
 function vLibrary() {
   const b = UI.route === 'board' ? boardById(UI.boardId) : null;
@@ -1084,6 +1096,7 @@ function renderDrawer(focus) {
     ${S.mode === 'demo' ? `<span class="btn ghost sm" aria-disabled="true">Sample post, no link</span>` : `<a class="btn sm" href="${postUrl(it)}" target="_blank" rel="noopener">${ic('ext')}Open on Instagram</a>`}
     ${standalone ? `<button class="btn ghost sm" data-act="d-embed">Show preview here</button>` : ''}
   </div></div>
+  ${it.cap ? `<p class="capq"><span class="xs dim">Caption from Instagram</span>${esc(it.cap)}</p>` : ''}
   <div id="d-embed"></div>
   <section><h3 class="lbl">Board</h3><div class="chips">${S.boards.map(b => `<button class="chip bc" style="--c:var(--b${b.color})" data-act="d-board" data-b="${b.id}" aria-pressed="${it.board === b.id}">${esc(b.name)}</button>`).join('')}<button class="chip" data-act="d-board" data-b="" aria-pressed="${!it.board}">Unsorted</button></div></section>
   <section><label class="lbl" for="d-note">What is it?</label><textarea id="d-note" class="field" rows="3" maxlength="500" placeholder="e.g. 20-minute chili noodles, or the hotel with the cliff pool">${esc(it.note)}</textarea></section>
@@ -1150,6 +1163,7 @@ function renderStage(anim) {
   el.innerHTML = `<div class="sort-grid">
 <section class="panel stage ${anim ? 'enter' : ''}" id="scard" aria-live="polite">${coverHTML(it, true)}
   <div class="s-meta">${it.author ? `<a class="handle-lg" href="${profUrl(it.author)}" target="_blank" rel="noopener">@${esc(it.author)}</a>` : '<span class="handle-lg">Unknown creator</span>'}<p class="small mut">${it.type === 'reel' ? 'Reel' : 'Post'} · saved ${fmtD(it.savedAt)}${more ? ` · ${plural(more, 'more save')} from this creator` : ''}</p>${it.cols.length ? `<p class="xs dim">In your Instagram collection ${it.cols.map(esc).join(', ')}</p>` : ''}</div>
+  ${it.cap ? `<p class="capq"><span class="xs dim">Caption from Instagram</span>${esc(it.cap)}</p>` : ''}
   <div class="s-actions">${S.mode === 'demo' ? `<span class="btn ghost sm" aria-disabled="true">Sample post, no link</span>` : `<a class="btn ghost sm" id="s-open" href="${postUrl(it)}" target="_blank" rel="noopener">${ic('ext')}Open on Instagram <kbd>O</kbd></a>`}
     <button class="btn ghost sm" data-act="skip">${ic('skip')}Skip <kbd>S</kbd></button><button class="btn ghost sm" data-act="letgo">${ic('box')}Let go <kbd>L</kbd></button><button class="btn ghost sm" data-act="undo" ${SORT.undo.length ? '' : 'disabled'}>${ic('undo')}Undo <kbd>Z</kbd></button></div>
   <label class="xs mut" for="s-note">Name it (optional, +5 XP)</label><input id="s-note" class="field" placeholder="What is this? e.g. miso pasta, hotel in Lisbon" maxlength="200" autocomplete="off">
@@ -1425,9 +1439,9 @@ function impHTML() {
   if (im.status === 'reading') return `<p class="found" role="status">Reading ${esc(im.name || 'your files')}…</p>`;
   if (im.status === 'error') return `<p class="err" role="alert">${esc(im.msg)}</p>`;
   if (im.status === 'merged') return `<div class="found" role="status"><b>Done.</b><p>${esc(im.msg)}</p><div class="row"><a class="btn" href="#sort">${ic('bolt')}Start sorting</a><a class="btn ghost" href="#library">Go to library</a></div></div>`;
-  const r = im.res; const ids = new Set([...r.saved, ...r.cols].map(x => x.id)); const cols = new Set(r.cols.map(c => c.col));
+  const r = im.res; const ids = new Set([...r.saved, ...r.cols].map(x => x.id)); const cols = new Set(r.cols.map(c => c.col)); const caps = new Set([...r.saved, ...r.cols].filter(x => x.cap).map(x => x.id));
   return `<div class="found" role="status"><b>Found in your download</b><ul>
-<li>${plural(ids.size, 'saved post')}${cols.size ? ` in ${plural(cols.size, 'collection')}` : ''}</li>
+<li>${plural(ids.size, 'saved post')}${cols.size ? ` in ${plural(cols.size, 'collection')}` : ''}${caps.size ? `, ${fmtN(caps.size)} with captions` : ''}</li>
 ${r.liked.length ? `<li>${plural(r.liked.length, 'liked post')}</li>` : ''}${r.following ? `<li>${plural(r.following.length, 'account')} you follow</li>` : ''}${r.followers ? `<li>${plural(r.followers.length, 'follower')}</li>` : ''}${r.unfollowed ? `<li>${plural(r.unfollowed.length, 'recently unfollowed account')}</li>` : ''}</ul>
 ${cols.size ? `<label class="check"><input type="checkbox" id="imp-cols" checked>Turn my Instagram collections into boards</label>` : ''}
 ${Object.keys(S.rules).length && S.mode === 'real' ? `<label class="check"><input type="checkbox" id="imp-rules" checked>Apply my autopilot rules</label>` : ''}
@@ -1438,16 +1452,18 @@ function vData() {
   main.innerHTML = `${banner().replace(/<a class="btn sm" href="#data">.*?<\/a>/, '')}<div class="head"><div><p class="eyebrow">Import &amp; data</p><h1>Bring in your Instagram</h1><p class="mut">Instagram doesn't let apps read your saved posts, so Savepoint uses the download Instagram gives you. The file is read on this device. Savepoint keeps only the list of saves and how you organize them.</p></div></div>
 <div class="data-grid">
 <section class="panel"><h2>Get your Instagram download</h2><ol class="steps">
-<li>In the Instagram app, open your profile, tap the menu (three lines) and choose <b>Accounts Center</b>.</li>
-<li>Tap <b>Your information and permissions</b>, then <b>Download your information</b>.</li>
-<li>Choose <b>Download or transfer information</b>, pick your Instagram account, then <b>Some of your information</b>.</li>
-<li>Tick <b>Saved</b>, <b>Likes</b> and <b>Followers and following</b>, then tap Next.</li>
-<li>Choose <b>Download to device</b>. Set the date range to <b>All time</b> and the format to <b>JSON</b>, then <b>Create files</b>.</li>
-<li>Instagram emails you when it's ready, often within the hour. Download the ZIP and drop it here.</li></ol>
-<p class="xs dim">Instagram renames these menus now and then. If one is missing, search Instagram Help for “download your information”.</p></section>
+<li>In the Instagram app, go to your profile and tap the menu (three lines, top right). That opens <b>Settings and activity</b>.</li>
+<li>Tap <b>Meta Account</b>, the first item under “Your account”. Older versions call it <b>Accounts Center</b>.</li>
+<li>Tap <b>Your information and permissions</b>, then <b>Export your information</b>. Older versions call it <b>Download your information</b>.</li>
+<li>Tap <b>Create export</b>, pick your Instagram profile, then <b>Export to device</b>.</li>
+<li>Tap <b>Customize information</b>. Everything starts ticked, which makes a huge file, so clear it all and tick only <b>Saved</b>, <b>Likes</b> and <b>Followers and following</b>.</li>
+<li>Set <b>Date range</b> to <b>All time</b> and <b>Format</b> to <b>JSON</b>, then tap <b>Start export</b>.</li>
+<li>Instagram notifies you when it's ready, usually within a few hours. Go back to <b>Export your information</b>, tap <b>Download</b>, and drop the ZIP here. The link expires after a few days.</li></ol>
+<p class="xs dim">Skip “Archiving and downloading” in Settings: that saves your own photos, not this data. If a menu name doesn't match, search Instagram Help for “export your information”.</p></section>
 <section class="panel"><h2>Add your file</h2>
 <label class="drop" id="drop">${ic('download')}<b>Drop the ZIP or JSON files here</b><span class="small">or tap to choose them</span><input type="file" id="impfile" accept=".zip,.json,application/zip,application/json" multiple></label>
-<div class="row"><label class="btn ghost sm filebtn">Choose an unzipped folder<input type="file" id="impdir" webkitdirectory multiple></label><span class="xs dim">Best for very large downloads</span></div>
+<div class="row"><label class="btn ghost sm filebtn">Choose an unzipped folder<input type="file" id="impdir" webkitdirectory multiple></label><span class="xs dim">On a computer, for very large downloads</span></div>
+<p class="xs dim">If tapping the box doesn't open your files inside the Claude app, open this page in your phone's browser and try again.</p>
 <div id="impres">${impHTML()}</div></section>
 <section class="panel"><h2>Add links by hand</h2><p class="small mut">Saved something since your download? Paste Instagram post or reel links, one per line.</p><label class="sr" for="links">Instagram links</label><textarea id="links" class="field" rows="4" placeholder="https://www.instagram.com/reel/…"></textarea><div class="row"><button class="btn ghost" data-act="links-add">${ic('plus')}Add links</button></div></section>
 <section class="panel"><h2>Backup</h2><p class="small mut">Keep a copy of your boards, notes and progress, or move them to another device.</p><div class="row"><button class="btn ghost" data-act="backup" ${S.mode === 'real' ? '' : 'disabled'}>Download backup</button><button class="btn ghost" data-act="csv" ${S.items.size ? '' : 'disabled'}>Download spreadsheet (CSV)</button><label class="btn ghost filebtn">Restore a backup<input type="file" id="restore" accept=".json,application/json"></label></div></section>
@@ -1491,7 +1507,7 @@ function mergeImport() {
     if (!p || !p.id) continue;
     let it = S.items.get(p.id);
     if (!it) { it = newItem(p); S.items.set(p.id, it); added++; }
-    else { if (!it.author && p.author) it.author = p.author; if (p.ts && !it.savedAt) it.savedAt = p.ts; }
+    else { if (!it.author && p.author) it.author = p.author; if (p.ts && !it.savedAt) it.savedAt = p.ts; if (p.cap && !it.cap) it.cap = p.cap; }
     if (p.col && !it.cols.includes(p.col)) it.cols.push(p.col);
     touched.push(it);
   }
