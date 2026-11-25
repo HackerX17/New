@@ -430,6 +430,9 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   .toast{padding:9px 14px;font-size:14px;box-shadow:0 8px 20px rgba(0,0,0,.4)}
   .toast:not(:last-child){display:none}
 }
+.appnote{display:grid;gap:10px;padding:14px;border-radius:var(--r);border:1px solid color-mix(in srgb,var(--gold) 55%,transparent);background:color-mix(in srgb,var(--gold) 10%,var(--panel))}
+.appnote b{color:var(--gold)}.appnote p{font-size:14.5px}
+.linkbox{display:block;max-width:100%;padding:8px 10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font:13px var(--mono);overflow-wrap:anywhere;user-select:all;-webkit-user-select:all}
 .howto summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;min-height:44px;color:var(--ink)}
 .howto summary::-webkit-details-marker{display:none}
 .howto summary::after{content:"Show";font-size:13px;color:var(--a1);flex:none}
@@ -644,6 +647,9 @@ const LABELS = ['Friend', 'Creator', 'Brand', 'Inspo'];
 const TITLES = [[1, 'Rookie Saver'], [3, 'Shelf Stacker'], [5, 'Board Builder'], [8, 'Feed Curator'], [12, 'Archive Ace'], [16, 'Grandmaster Curator'], [20, 'Savepoint Legend']];
 const FILTERS = [['all', 'All'], ['unsorted', 'Unsorted'], ['reel', 'Reels'], ['post', 'Posts'], ['starred', '4+ stars'], ['try', 'To try'], ['done', 'Done'], ['letgo', 'Let go']];
 const SORTS = [['new', 'Newest saved'], ['old', 'Oldest saved'], ['creator', 'Creator A–Z'], ['rated', 'Top rated'], ['filed', 'Recently filed']];
+// Inside the Android app's built-in viewer (an Android WebView), pages can't open the file picker.
+const IN_APP = /Android/.test(navigator.userAgent) && /;\s*wv\)/.test(navigator.userAgent);
+const PAGE_URL = 'https://claude.ai/artifact/7kJG9uC59nBhzq5JfrWx5V';
 const SKINS = [
   ['arcade', 'Night Arcade', 'Neon violet, from your arcade games', 'linear-gradient(135deg,#0a0420 0 52%,#00f0ff 52% 72%,#ff2bd6 72%)'],
   ['atlas', 'Star Atlas', 'Midnight and gold, from Synastry Score', 'linear-gradient(135deg,#0c1a20 0 52%,#f2c94c 52% 72%,#ff8fa3 72%)'],
@@ -1498,6 +1504,7 @@ function vData() {
   main.innerHTML = `${banner().replace(/<a class="btn sm" href="#data">.*?<\/a>/, '')}<div class="head"><div><p class="eyebrow">Import &amp; data</p><h1>Bring in your Instagram</h1><p class="mut">Instagram doesn't let apps read your saved posts, so Savepoint uses the download Instagram gives you. The file is read on this device. Savepoint keeps only the list of saves and how you organize them.</p></div></div>
 <div class="data-grid">
 <section class="panel" id="addfile"><h2>Add your file</h2>
+${IN_APP ? `<div class="appnote" role="note"><b>The Claude app can’t open files from this page.</b><p>Open it in Chrome to import: copy the link, paste it into Chrome and sign in. Your library is saved to your account, so it shows up here in the app afterwards.</p><div class="row"><code class="linkbox" id="pagelink">${PAGE_URL}</code></div><div class="row"><button class="btn sm" data-act="copy-link">Copy link</button><a class="btn ghost sm" href="intent://${PAGE_URL.replace('https://', '')}#Intent;scheme=https;package=com.android.chrome;end">Open in Chrome</a></div></div>` : ''}
 <div id="impres">${impHTML()}</div>
 <label class="drop" id="drop">${ic('download')}<b>Tap to choose your Instagram ZIP</b><span class="small">or the JSON files inside it. On a computer you can also drag them here.</span><input type="file" id="impfile" multiple aria-label="Choose your Instagram download"></label>
 <div id="pickhelp"></div>
@@ -1631,7 +1638,7 @@ function refreshImp() { const el = $('#impres'); if (el) el.innerHTML = impHTML(
 const PICK = {on: false, away: false, timer: 0};
 function pickHelp(show) {
   const el = $('#pickhelp'); if (!el) return;
-  el.innerHTML = show ? `<div class="err" role="alert"><b>Your files didn’t open.</b> Some apps don’t let a page open files. Open this same page in your phone’s browser${Store.kind === 'db' ? ', or on a computer,' : ''} and import there.${Store.kind === 'db' ? ' Your library is saved to your Claude account, so it shows up here too.' : ''}</div>` : '';
+  el.innerHTML = show ? `<div class="err" role="alert"><b>Your files didn’t open.</b> This app doesn’t let a page open files. Open this page in your phone’s browser${Store.kind === 'db' ? ' or on a computer' : ''} and import there: ${PAGE_URL}${Store.kind === 'db' ? ' Your library is saved to your Claude account, so it shows up here too.' : ''}</div>` : '';
 }
 function pickStart() { PICK.on = true; PICK.away = false; clearTimeout(PICK.timer); pickHelp(false); PICK.timer = setTimeout(() => { if (PICK.on && !PICK.away && matchMedia('(pointer: coarse)').matches) pickHelp(true); }, 2500); }
 function pickAway() { if (PICK.on) { PICK.away = true; pickHelp(false); } }
@@ -1766,6 +1773,10 @@ const ACT = {
   pmore: () => { UI.pshown += 100; vPeople(); },
   'imp-go': () => mergeImport(), 'imp-cancel': () => { UI.imp = null; refreshImp(); },
   'links-add': () => addLinks(),
+  'copy-link': async () => {
+    try { await navigator.clipboard.writeText(PAGE_URL); toast('Link copied. Paste it into Chrome.'); }
+    catch (e) { const el = $('#pagelink'); if (el) { const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } toast('Couldn’t copy here. The link is selected: long-press it and choose Copy.'); }
+  },
   backup: () => offerFile(`savepoint-backup-${dayKey(new Date())}.json`, backupJSON(), 'application/json'),
   csv: () => offerFile(`savepoint-${dayKey(new Date())}.csv`, csv(), 'text/csv'),
   erase: () => { UI.erase = true; vData(); }, 'erase-no': () => { UI.erase = false; vData(); },
