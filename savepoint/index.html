@@ -100,6 +100,8 @@ select.field{padding-right:32px;appearance:none;background-image:linear-gradient
 .mbar{height:10px;border-radius:9px;background:var(--panel2);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
 .mbar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--a1),var(--a2))}
 .mbar.sm{height:6px}
+.mbar.busy i{width:35%;animation:busy 1.1s ease-in-out infinite alternate}
+@keyframes busy{from{transform:translateX(-10%)}to{transform:translateX(200%)}}
 .bchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:2px 9px 2px 7px;border-radius:999px;background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--ink);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .bchip::before{content:"";width:8px;height:8px;border-radius:3px;background:var(--c);flex:none}
 .bchip.none{--c:var(--dim);color:var(--muted)}
@@ -254,11 +256,28 @@ main{padding-block:20px 120px;padding-left:max(16px,env(safe-area-inset-left,0px
 @keyframes pop{50%{transform:scale(1.25)}}
 .timer{flex:1 1 100%;height:8px;border-radius:9px;background:var(--panel2);overflow:hidden}
 .timer i{display:block;height:100%;background:linear-gradient(90deg,var(--a3),var(--gold),var(--a2));transform-origin:left}
-.sort-grid{display:grid;gap:18px;grid-template-columns:minmax(0,1fr);align-items:start}
-@media(min-width:1040px){.sort-grid{grid-template-columns:minmax(0,5fr) minmax(0,6fr)}}
+.sort-grid{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);grid-template-areas:"card" "pad" "extra";align-items:start}
+.s-card{grid-area:card}.s-pad{grid-area:pad}.s-extra{grid-area:extra}
+@media(min-width:1040px){.sort-grid{grid-template-columns:minmax(0,5fr) minmax(0,6fr);grid-template-areas:"card pad" "extra pad";gap:18px}}
+@media(pointer:coarse){.keys,.s-actions kbd,.bpad kbd{display:none}}
+@media(max-width:600px){
+  main{gap:14px;padding-top:14px}
+  .hud{gap:6px 12px;padding:10px 12px}.hud .mbar{flex:1 1 70px}.hud .orgpct,.hud .sess{display:none}
+  .stage{gap:10px}.s-pad .boardpad{gap:8px;grid-template-columns:repeat(auto-fill,minmax(min(100%,128px),1fr))}.bpad{min-height:52px;padding:8px 10px;gap:8px}
+}
 .stage{display:grid;gap:14px;align-content:start}
-.stage .cover{max-height:44vh;width:100%;aspect-ratio:5/4}
+.stage .cover{width:100%;aspect-ratio:5/4}
+.stage .cover{max-height:44vh}
 @media(min-width:1040px){.stage .cover{aspect-ratio:4/5;max-height:46vh}}
+@media(max-width:1039.98px){
+  #scard{grid-template-columns:92px minmax(0,1fr);column-gap:14px;row-gap:12px}
+  #scard .cover{width:92px;aspect-ratio:4/5;max-height:none}
+  #scard .cover .mono{font-size:32px;left:8px;bottom:5px}
+  #scard .cover .kind{font-size:10.5px;left:5px;top:5px}
+  #scard .s-meta{align-self:center}
+  #scard>:not(.cover):not(.s-meta){grid-column:1/-1}
+  .sort-head-copy{display:none}
+}
 .s-meta{display:grid;gap:4px}
 .s-actions{display:flex;flex-wrap:wrap;gap:8px}
 .fly{animation:fly .24s ease-in forwards}
@@ -413,10 +432,22 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .toast{padding:12px 16px;border-radius:var(--r);background:var(--ink);color:var(--bg);font-weight:600;font-size:14.5px;box-shadow:0 12px 30px rgba(0,0,0,.45);animation:enter .2s ease-out}
 .toast.t-level,.toast.t-ach{background:var(--gold);color:#1f1600}
 .toast.out{opacity:0;transition:opacity .3s}
+@media(max-width:600px){
+  .toasts{top:calc(env(safe-area-inset-top,0px) + 68px);bottom:auto}
+  .toast{padding:9px 14px;font-size:14px;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+  .toast:not(:last-child){display:none}
+}
+.howto summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;min-height:44px;color:var(--ink)}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary::after{content:"Show";font-size:13px;color:var(--a1);flex:none}
+.howto[open] summary::after{content:"Hide"}
+.howto[open]>summary{margin-bottom:12px}
+.howto .steps{margin-bottom:12px}
+#scard .handle-lg{overflow-wrap:anywhere;word-break:normal}
+@media(max-width:600px){#scard .handle-lg{font-size:calc(17px * var(--hs))}}
 .confetti{position:fixed;inset:0;z-index:70;pointer-events:none;width:100%;height:100%}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <header class="top"><div class="top-in">
   <a class="logo" href="#library"><svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="10" style="fill:var(--panel2)"/><path d="M11 7.5h12v19l-6-4.4-6 4.4z" style="fill:none;stroke:var(--a1);stroke-width:2.6;stroke-linejoin:round"/><rect x="15" y="11.5" width="4" height="4" style="fill:var(--a2)"/></svg><span>Savepoint</span></a>
@@ -704,7 +735,7 @@ const ACH = [
 
 /* =============== storage: your account (private per person) or this browser =============== */
 const Store = {
-  kind: 'none', db: null, base: '', dM: false, dI: new Set(), dP: new Set(), timer: 0, writing: false, state: 'idle',
+  kind: 'none', db: null, base: '', dM: false, dI: new Set(), dP: new Set(), timer: 0, writing: false, state: 'idle', rev: '', mine: [], unsub: null,
   async init() {
     if (window.claude && typeof window.claude.use === 'function') {
       try {
@@ -745,7 +776,6 @@ const Store = {
     const dI = [...this.dI], dP = [...this.dP], dM = this.dM;
     this.dI.clear(); this.dP.clear(); this.dM = false;
     try {
-      if (dM) await this.write('meta', encMeta());
       if (dI.length) {
         const out = new Map(dI.map(b => [b, []]));
         for (const it of S.items.values()) { const b = hash32(it.id) % NB_I; if (out.has(b)) out.get(b).push(enc(it)); }
@@ -756,6 +786,8 @@ const Store = {
         for (const p of S.people.values()) { const b = hash32(p.u) % NB_P; if (out.has(b)) out.get(b).push(encP(p)); }
         for (const [b, rows] of out) await this.write('people-' + b, rows.length ? {v: 1, rows} : null);
       }
+      const meta = encMeta(); meta.rev = rid() + Date.now().toString(36); this.rev = meta.rev; this.mine.push(meta.rev); if (this.mine.length > 50) this.mine.shift();
+      await this.write('meta', meta);
       setSave('idle');
     } catch (e) {
       dI.forEach(b => this.dI.add(b)); dP.forEach(b => this.dP.add(b)); if (dM) this.dM = true;
@@ -765,8 +797,20 @@ const Store = {
       if (code !== 'quota_exceeded' && code !== 'invalid_argument') setTimeout(() => this.schedule(), 5000);
     } finally { this.writing = false; }
   },
+  dirty() { return this.dM || this.dI.size > 0 || this.dP.size > 0; },
+  watch() {
+    if (this.kind !== 'db' || this.unsub) return;
+    try {
+      this.unsub = this.db.doc(this.base + '/meta').onSnapshot(snap => {
+        if (!snap || !snap.exists || (snap.metadata && snap.metadata.hasPendingWrites)) return;
+        const d = snap.data() || {};
+        if (!d.rev || d.rev === this.rev || this.mine.includes(d.rev) || this.writing || this.dirty() || d.mode !== 'real') return;
+        this.rev = d.rev; reloadFromStore();
+      }, () => { this.unsub = null; });
+    } catch (e) { this.unsub = null; }
+  },
   async eraseAll() {
-    clearTimeout(this.timer); this.dI.clear(); this.dP.clear(); this.dM = false;
+    clearTimeout(this.timer); this.dI.clear(); this.dP.clear(); this.dM = false; this.rev = 'erased-' + Date.now();
     for (let i = 0; i < NB_I; i++) await this.write('items-' + i, null);
     for (let i = 0; i < NB_P; i++) await this.write('people-' + i, null);
     await this.write('meta', null);
@@ -1134,8 +1178,8 @@ function curItem() {
 }
 function vSort() {
   if (!SORT.built) buildQueue();
-  main.innerHTML = `${banner()}<div class="head"><div><p class="eyebrow">Sort mode</p><h1>Clear the inbox</h1><p class="mut">One save at a time. Tap a board or press its number. Quick choices build a combo that multiplies your XP.</p></div>
-<div class="head-actions"><div class="seg" role="group" aria-label="Mode"><button data-act="smode" data-v="zen" aria-pressed="${SORT.mode === 'zen'}">Zen</button><button data-act="smode" data-v="sprint" aria-pressed="${SORT.mode === 'sprint'}">60-second sprint</button></div>
+  main.innerHTML = `${banner()}<div class="head"><div><p class="eyebrow">Sort mode</p><h1>Clear the inbox</h1><p class="mut sort-head-copy">One save at a time. Tap a board or press its number. Quick choices build a combo that multiplies your XP.</p></div>
+<div class="head-actions"><div class="seg" role="group" aria-label="Mode"><button data-act="smode" data-v="zen" aria-pressed="${SORT.mode === 'zen'}">Zen</button><button data-act="smode" data-v="sprint" aria-pressed="${SORT.mode === 'sprint'}">60s sprint</button></div>
 <label><span class="sr">Order</span><select id="sorder" class="field" style="width:auto"><option value="creator" ${SORT.order === 'creator' ? 'selected' : ''}>By creator</option><option value="new" ${SORT.order === 'new' ? 'selected' : ''}>Newest first</option><option value="old" ${SORT.order === 'old' ? 'selected' : ''}>Oldest first</option><option value="random" ${SORT.order === 'random' ? 'selected' : ''}>Shuffle</option></select></label></div></div>
 <div id="hud"></div><div id="stagewrap"></div>`;
   renderStage();
@@ -1145,8 +1189,8 @@ function renderHud() {
   const un = unsorted().length, lv = live().length, p = pct(lv - un, lv), sp = SORT.sprint;
   const mult = Math.min(5, 1 + Math.floor(Math.max(0, SORT.combo - 1) / 3));
   el.className = 'hud';
-  el.innerHTML = `<span class="small">Left <b class="num">${fmtN(un)}</b></span><div class="mbar" role="img" aria-label="${p}% organized"><i style="width:${p}%"></i></div><span class="small num">${p}% organized</span>
-<span class="combo ${SORT.combo >= 3 ? 'hot' : ''}" id="combo">Combo x${SORT.combo || 0}${mult > 1 ? ` · ${mult}x XP` : ''}</span><span class="small mut">This session <b class="num">+${fmtN(SORT.session)}</b> XP</span>
+  el.innerHTML = `<span class="small">Left <b class="num">${fmtN(un)}</b></span><div class="mbar" role="img" aria-label="${p}% organized"><i style="width:${p}%"></i></div><span class="small num orgpct">${p}% organized</span>
+<span class="combo ${SORT.combo >= 3 ? 'hot' : ''}" id="combo">Combo x${SORT.combo || 0}${mult > 1 ? ` · ${mult}x XP` : ''}</span><span class="small mut sess">This session <b class="num">+${fmtN(SORT.session)}</b> XP</span>
 ${sp && sp.on ? `<span class="small">Filed <b class="num">${sp.filed}</b></span><span class="small num" id="tleft">${Math.ceil((sp.end - Date.now()) / 1000)}s</span><div class="timer" aria-hidden="true"><i id="tbar" style="transform:scaleX(${Math.max(0, (sp.end - Date.now()) / 60000)})"></i></div>` : ''}`;
 }
 function renderStage(anim) {
@@ -1168,18 +1212,20 @@ function renderStage(anim) {
   }
   const more = unsorted().filter(i => i.author === it.author && i.id !== it.id).length;
   el.innerHTML = `<div class="sort-grid">
-<section class="panel stage ${anim ? 'enter' : ''}" id="scard" aria-live="polite">${coverHTML(it, true)}
+<section class="panel stage s-card ${anim ? 'enter' : ''}" id="scard" aria-live="polite">${coverHTML(it, true)}
   <div class="s-meta">${it.author ? `<a class="handle-lg" href="${profUrl(it.author)}" target="_blank" rel="noopener">@${esc(it.author)}</a>` : '<span class="handle-lg">Unknown creator</span>'}<p class="small mut">${it.type === 'reel' ? 'Reel' : 'Post'} · saved ${fmtD(it.savedAt)}${more ? ` · ${plural(more, 'more save')} from this creator` : ''}</p>${it.cols.length ? `<p class="xs dim">In your Instagram collection ${it.cols.map(esc).join(', ')}</p>` : ''}</div>
   ${it.cap ? `<p class="capq"><span class="xs dim">Caption from Instagram</span>${esc(it.cap)}</p>` : ''}
-  <div class="s-actions">${S.mode === 'demo' ? `<span class="btn ghost sm" aria-disabled="true">Sample post, no link</span>` : `<a class="btn ghost sm" id="s-open" href="${postUrl(it)}" target="_blank" rel="noopener">${ic('ext')}Open on Instagram <kbd>O</kbd></a>`}
-    <button class="btn ghost sm" data-act="skip">${ic('skip')}Skip <kbd>S</kbd></button><button class="btn ghost sm" data-act="letgo">${ic('box')}Let go <kbd>L</kbd></button><button class="btn ghost sm" data-act="undo" ${SORT.undo.length ? '' : 'disabled'}>${ic('undo')}Undo <kbd>Z</kbd></button></div>
-  <label class="xs mut" for="s-note">Name it (optional, +5 XP)</label><input id="s-note" class="field" placeholder="What is this? e.g. miso pasta, hotel in Lisbon" maxlength="200" autocomplete="off">
 </section>
-<section class="stage">
-  <div id="batch">${batchHTML()}</div>
+<section class="stage s-pad">
   <h2 class="lbl">File into</h2>
   <div class="boardpad">${S.boards.map((b, i) => `<button class="bpad" style="--c:var(--b${b.color})" data-act="file" data-b="${b.id}"><span class="sw"></span><span class="bn">${esc(b.name)}</span>${i < 9 ? `<kbd>${i + 1}</kbd>` : ''}</button>`).join('')}<button class="bpad add" data-act="sort-newboard">${ic('plus')}<span class="bn">New board</span></button></div>
   ${SORT.newBoard ? `<form class="panel formgrid" id="sortnb"><label class="small mut" for="snb">New board name</label><div class="row"><input id="snb" class="field" style="flex:1 1 180px" maxlength="40" placeholder="e.g. Recipes" required><button class="btn">Create and file</button></div></form>` : ''}
+  <div id="batch">${batchHTML()}</div>
+</section>
+<section class="stage s-extra">
+  <div class="s-actions">${S.mode === 'demo' ? `<span class="btn ghost sm" aria-disabled="true">Sample post, no link</span>` : `<a class="btn ghost sm" id="s-open" href="${postUrl(it)}" target="_blank" rel="noopener">${ic('ext')}Open on Instagram <kbd>O</kbd></a>`}
+    <button class="btn ghost sm" data-act="skip">${ic('skip')}Skip <kbd>S</kbd></button><button class="btn ghost sm" data-act="letgo">${ic('box')}Let go <kbd>L</kbd></button><button class="btn ghost sm" data-act="undo" ${SORT.undo.length ? '' : 'disabled'}>${ic('undo')}Undo <kbd>Z</kbd></button></div>
+  <label class="xs mut" for="s-note">Name it (optional, +5 XP)</label><input id="s-note" class="field" placeholder="What is this? e.g. miso pasta, hotel in Lisbon" maxlength="200" autocomplete="off">
   <p class="keys"><span><kbd>1</kbd>–<kbd>9</kbd> file</span><span><kbd>S</kbd> skip</span><span><kbd>L</kbd> let go</span><span><kbd>Z</kbd> undo</span><span><kbd>O</kbd> open</span></p>
 </section></div>`;
   if (SORT.newBoard) setTimeout(() => { const i = $('#snb'); if (i) i.focus(); }, 10);
@@ -1443,7 +1489,7 @@ function storageText() {
 }
 function impHTML() {
   const im = UI.imp; if (!im) return '';
-  if (im.status === 'reading') return `<p class="found" role="status">Reading ${esc(im.name || 'your files')}…</p>`;
+  if (im.status === 'reading') return `<div class="found" role="status"><b>Reading ${esc(im.name || 'your file')}${im.size ? ` (${fmtSize(im.size)})` : ''}…</b>${im.step ? `<p class="xs mut">${esc(im.step)}</p>` : ''}<div class="mbar sm busy"><i></i></div></div>`;
   if (im.status === 'error') return `<p class="err" role="alert">${esc(im.msg)}</p>`;
   if (im.status === 'merged') return `<div class="found" role="status"><b>Done.</b><p>${esc(im.msg)}</p><div class="row"><a class="btn" href="#sort">${ic('bolt')}Start sorting</a><a class="btn ghost" href="#library">Go to library</a></div></div>`;
   const r = im.res; const ids = new Set([...r.saved, ...r.cols].map(x => x.id)); const cols = new Set(r.cols.map(c => c.col)); const caps = new Set([...r.saved, ...r.cols].filter(x => x.cap).map(x => x.id));
@@ -1458,7 +1504,12 @@ ${S.mode === 'demo' ? '<p class="xs mut">This replaces the sample saves with you
 function vData() {
   main.innerHTML = `${banner().replace(/<a class="btn sm" href="#data">.*?<\/a>/, '')}<div class="head"><div><p class="eyebrow">Import &amp; data</p><h1>Bring in your Instagram</h1><p class="mut">Instagram doesn't let apps read your saved posts, so Savepoint uses the download Instagram gives you. The file is read on this device. Savepoint keeps only the list of saves and how you organize them.</p></div></div>
 <div class="data-grid">
-<section class="panel"><h2>Get your Instagram download</h2><ol class="steps">
+<section class="panel" id="addfile"><h2>Add your file</h2>
+<div id="impres">${impHTML()}</div>
+<label class="drop" id="drop">${ic('download')}<b>Tap to choose your Instagram ZIP</b><span class="small">or the JSON files inside it. On a computer you can also drag them here.</span><input type="file" id="impfile" multiple aria-label="Choose your Instagram download"></label>
+<div id="pickhelp"></div>
+<div class="row"><label class="btn ghost sm filebtn">Choose an unzipped folder<input type="file" id="impdir" webkitdirectory multiple aria-label="Choose an unzipped Instagram folder"></label><span class="xs dim">On a computer, for very large downloads</span></div></section>
+<section class="panel"><details class="howto" ${S.mode === 'demo' ? 'open' : ''}><summary><h2>How to get your Instagram download</h2></summary><ol class="steps">
 <li>In the Instagram app, go to your profile and tap the menu (three lines, top right). That opens <b>Settings and activity</b>.</li>
 <li>Tap <b>Meta Account</b>, the first item under “Your account”. Older versions call it <b>Accounts Center</b>.</li>
 <li>Tap <b>Your information and permissions</b>, then <b>Export your information</b>. Older versions call it <b>Download your information</b>.</li>
@@ -1466,14 +1517,9 @@ function vData() {
 <li>Tap <b>Customize information</b>. Everything starts ticked, which makes a huge file, so clear it all and tick only <b>Saved</b>, <b>Likes</b> and <b>Followers and following</b>.</li>
 <li>Set <b>Date range</b> to <b>All time</b> and <b>Format</b> to <b>JSON</b>, then tap <b>Start export</b>.</li>
 <li>Instagram notifies you when it's ready, usually within a few hours. Go back to <b>Export your information</b>, tap <b>Download</b>, and drop the ZIP here. The link expires after a few days.</li></ol>
-<p class="xs dim">Skip “Archiving and downloading” in Settings: that saves your own photos, not this data. If a menu name doesn't match, search Instagram Help for “export your information”.</p></section>
-<section class="panel"><h2>Add your file</h2>
-<label class="drop" id="drop">${ic('download')}<b>Drop the ZIP or JSON files here</b><span class="small">or tap to choose them</span><input type="file" id="impfile" accept=".zip,.json,application/zip,application/json" multiple></label>
-<div class="row"><label class="btn ghost sm filebtn">Choose an unzipped folder<input type="file" id="impdir" webkitdirectory multiple></label><span class="xs dim">On a computer, for very large downloads</span></div>
-<p class="xs dim">If tapping the box doesn't open your files inside the Claude app, open this page in your phone's browser and try again.</p>
-<div id="impres">${impHTML()}</div></section>
+<p class="xs dim">Skip “Archiving and downloading” in Settings: that saves your own photos, not this data. If a menu name doesn't match, search Instagram Help for “export your information”.</p></details></section>
 <section class="panel"><h2>Add links by hand</h2><p class="small mut">Saved something since your download? Paste Instagram post or reel links, one per line.</p><label class="sr" for="links">Instagram links</label><textarea id="links" class="field" rows="4" placeholder="https://www.instagram.com/reel/…"></textarea><div class="row"><button class="btn ghost" data-act="links-add">${ic('plus')}Add links</button></div></section>
-<section class="panel"><h2>Backup</h2><p class="small mut">Keep a copy of your boards, notes and progress, or move them to another device.</p><div class="row"><button class="btn ghost" data-act="backup" ${S.mode === 'real' ? '' : 'disabled'}>Download backup</button><button class="btn ghost" data-act="csv" ${S.items.size ? '' : 'disabled'}>Download spreadsheet (CSV)</button><label class="btn ghost filebtn">Restore a backup<input type="file" id="restore" accept=".json,application/json"></label></div></section>
+<section class="panel"><h2>Backup</h2><p class="small mut">Keep a copy of your boards, notes and progress, or move them to another device.</p><div class="row"><button class="btn ghost" data-act="backup" ${S.mode === 'real' ? '' : 'disabled'}>Download backup</button><button class="btn ghost" data-act="csv" ${S.items.size ? '' : 'disabled'}>Download spreadsheet (CSV)</button><label class="btn ghost filebtn">Restore a backup<input type="file" id="restore" aria-label="Restore a Savepoint backup"></label></div></section>
 <section class="panel"><h2>Where your data lives</h2><p class="small mut">${storageText()}</p>
 ${S.mode === 'real' ? (UI.erase ? `<div class="row"><span class="small">Erase every save, board and trophy? This can't be undone.</span><button class="btn danger sm" data-act="erase-yes">Erase everything</button><button class="btn ghost sm" data-act="erase-no">Keep my data</button></div>` : `<div class="row"><button class="btn ghost sm" data-act="erase">Erase my data</button></div>`) : ''}</section>
 </div>`;
@@ -1482,30 +1528,125 @@ ${S.mode === 'real' ? (UI.erase ? `<div class="row"><span class="small">Erase ev
   drop.addEventListener('dragleave', () => drop.classList.remove('over'));
   drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); const f = [...(e.dataTransfer.files || [])]; if (f.length) runImport(f, false); });
 }
+const fmtSize = b => b >= 1e9 ? (b / 1e9).toFixed(1) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB';
+function setImp(v) {
+  UI.imp = v; refreshImp();
+  const el = $('#impres'); if (el && v && v.status !== 'reading-step') try { el.scrollIntoView({block: 'nearest', behavior: reduced() ? 'auto' : 'smooth'}); } catch (e) { /* old browsers */ }
+}
+async function sniffFile(f) {
+  const h = new Uint8Array(await f.slice(0, 4).arrayBuffer());
+  if (h[0] === 0x50 && h[1] === 0x4b && (h[2] === 3 || h[2] === 5 || h[2] === 7)) return 'zip';
+  const t = (await f.slice(0, 1024).text()).replace(/^﻿/, '').trimStart();
+  if (t[0] === '{' || t[0] === '[') return 'json';
+  if (t[0] === '<') return 'html';
+  return '';
+}
+const rawInflate = (() => { try { new DecompressionStream('deflate-raw'); return true; } catch (e) { return false; } })();
+// Reads only the ZIP's directory and the few files Savepoint needs, so even a multi-gigabyte export with photos opens on a phone.
+async function zipEntries(file) {
+  const size = file.size, tailLen = Math.min(size, 65557 + 20);
+  const tail = new DataView(await file.slice(size - tailLen).arrayBuffer());
+  let eo = -1; for (let i = tail.byteLength - 22; i >= 0; i--) if (tail.getUint32(i, true) === 0x06054b50) { eo = i; break; }
+  if (eo < 0) throw new Error('notzip');
+  let count = tail.getUint16(eo + 10, true), cdSize = tail.getUint32(eo + 12, true), cdOff = tail.getUint32(eo + 16, true);
+  if (count === 0xffff || cdSize === 0xffffffff || cdOff === 0xffffffff) {
+    const lp = eo - 20;
+    if (lp >= 0 && tail.getUint32(lp, true) === 0x07064b50) {
+      const zo = Number(tail.getBigUint64(lp + 8, true)); const z = new DataView(await file.slice(zo, zo + 56).arrayBuffer());
+      if (z.getUint32(0, true) === 0x06064b50) { count = Number(z.getBigUint64(32, true)); cdSize = Number(z.getBigUint64(40, true)); cdOff = Number(z.getBigUint64(48, true)); }
+    }
+  }
+  const cd = new DataView(await file.slice(cdOff, cdOff + cdSize).arrayBuffer()); const td = new TextDecoder();
+  const list = []; let p = 0;
+  for (let n = 0; n < count && p + 46 <= cd.byteLength; n++) {
+    if (cd.getUint32(p, true) !== 0x02014b50) break;
+    const method = cd.getUint16(p + 10, true); let csize = cd.getUint32(p + 20, true), usize = cd.getUint32(p + 24, true);
+    const nl = cd.getUint16(p + 28, true), xl = cd.getUint16(p + 30, true), cl = cd.getUint16(p + 32, true); let lho = cd.getUint32(p + 42, true);
+    const name = td.decode(new Uint8Array(cd.buffer, cd.byteOffset + p + 46, nl));
+    if (csize === 0xffffffff || usize === 0xffffffff || lho === 0xffffffff) {
+      let q = p + 46 + nl; const end = q + xl;
+      while (q + 4 <= end) { const id = cd.getUint16(q, true), sz = cd.getUint16(q + 2, true); if (id === 1) { let r = q + 4; if (usize === 0xffffffff) { usize = Number(cd.getBigUint64(r, true)); r += 8; } if (csize === 0xffffffff) { csize = Number(cd.getBigUint64(r, true)); r += 8; } if (lho === 0xffffffff) lho = Number(cd.getBigUint64(r, true)); break; } q += 4 + sz; }
+    }
+    p += 46 + nl + xl + cl;
+    if (name.endsWith('/')) continue;
+    list.push({name, text: async () => {
+      const lh = new DataView(await file.slice(lho, lho + 30).arrayBuffer());
+      if (lh.getUint32(0, true) !== 0x04034b50) throw new Error('bad entry');
+      const start = lho + 30 + lh.getUint16(26, true) + lh.getUint16(28, true); const blob = file.slice(start, start + csize);
+      if (method === 0) return blob.text();
+      if (method === 8) return new Response(blob.stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+      throw new Error('unsupported');
+    }});
+  }
+  return list;
+}
+function loadJSZip() {
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'; sc.onload = () => window.JSZip ? res(window.JSZip) : rej(new Error('zip-lib')); sc.onerror = () => rej(new Error('zip-lib')); document.head.appendChild(sc); });
+}
+function addJSON(res, k, text, sniffIt) {
+  let j; try { j = JSON.parse(fixJson(text)); } catch (e) { res.bad++; return; }
+  if (!k && sniffIt) k = sniff(j);
+  if (k && k !== 'html') addParsed(res, k, j);
+}
+async function readZip(f, res) {
+  if (rawInflate) {
+    let list = null;
+    try { list = await zipEntries(f); } catch (e) { if (e && e.message === 'notzip') throw new Error('That ZIP is incomplete. Download it again from Instagram, then try once more.'); }
+    if (list) {
+      for (const e of list) {
+        const k = kindOf(e.name); if (k === 'html') { res.html++; continue; } if (!k) continue;
+        UI.imp.step = 'Reading ' + e.name.split('/').pop(); refreshImp();
+        let text; try { text = await e.text(); } catch (er) { res.bad++; continue; }
+        addJSON(res, k, text, false);
+      }
+      return;
+    }
+  }
+  if (f.size > 1.5e9) throw new Error(`That ZIP is ${fmtSize(f.size)}, too big to open in this browser. Unzip it on a computer and use “Choose an unzipped folder”, or request a new download with only Saved, Likes and Followers and following.`);
+  let JSZip; try { JSZip = await loadJSZip(); } catch (e) { throw new Error('The ZIP reader couldn’t load. Check your connection, or unzip the file and choose the JSON files inside it.'); }
+  const zip = await JSZip.loadAsync(f);
+  for (const z of Object.values(zip.files)) { if (z.dir) continue; const k = kindOf(z.name); if (k === 'html') { res.html++; continue; } if (!k) continue; addJSON(res, k, await z.async('string'), false); }
+}
 async function runImport(files, folder) {
-  const big = files.find(f => /\.zip$/i.test(f.name) && f.size > 1.5e9);
-  if (big) { UI.imp = {status: 'error', msg: `That ZIP is ${(big.size / 1e9).toFixed(1)} GB, too big to open in a browser. Unzip it and use “Choose an unzipped folder”, or request a new download with only Saved, Likes and Followers and following.`}; refreshImp(); return; }
-  UI.imp = {status: 'reading', name: files.length === 1 ? files[0].name : plural(files.length, 'file')}; refreshImp();
-  const res = newImport();
+  pickDone();
+  files = files.filter(Boolean); if (!files.length) return;
+  setImp({status: 'reading', name: files.length === 1 ? (files[0].name || 'your file') : plural(files.length, 'file'), size: files.reduce((a, f) => a + (f.size || 0), 0)});
+  const res = newImport(); res.bad = 0; let other = 0;
   try {
     for (const f of files) {
-      const path = f.webkitRelativePath || f.name;
-      if (/\.zip$/i.test(f.name) || f.type === 'application/zip') {
-        if (!window.JSZip) throw new Error('The ZIP reader didn’t load. Check your connection, or unzip the file and choose the folder instead.');
-        const zip = await window.JSZip.loadAsync(f);
-        for (const z of Object.values(zip.files)) { if (z.dir) continue; const k = kindOf(z.name); if (k === 'html') { res.html++; continue; } if (!k) continue; try { addParsed(res, k, JSON.parse(fixJson(await z.async('string')))); } catch (e) { /* skip unreadable file */ } }
-      } else if (/\.json$/i.test(f.name)) {
-        let k = kindOf(path); if (!k && folder) continue;
-        try { const j = JSON.parse(fixJson(await f.text())); k = k || sniff(j); if (k) addParsed(res, k, j); } catch (e) { /* skip */ }
-      } else if (kindOf(path) === 'html') res.html++;
+      const path = f.webkitRelativePath || f.name || '';
+      if (folder) { const k = kindOf(path); if (k === 'html') { res.html++; continue; } if (!k) continue; addJSON(res, k, await f.text(), false); continue; }
+      const type = await sniffFile(f);
+      if (type === 'zip') await readZip(f, res);
+      else if (type === 'json') addJSON(res, kindOf(path), await f.text(), true);
+      else if (type === 'html') res.html++;
+      else other++;
     }
-  } catch (e) { UI.imp = {status: 'error', msg: e && e.message && !/^\w+Error/.test(e.message) ? e.message : 'Couldn’t open that file. Make sure it’s the ZIP Instagram emailed you, or the JSON files inside it.'}; refreshImp(); return; }
+  } catch (e) { setImp({status: 'error', msg: e && e.message && !/^\w*Error\b|^[a-z-]+$/.test(e.message) ? e.message : 'Couldn’t read that file. Pick the ZIP Instagram gave you, or the JSON files inside it.'}); return; }
   const any = res.saved.length || res.cols.length || res.liked.length || res.followers || res.following;
-  if (!any) { UI.imp = {status: 'error', msg: res.html ? 'This download is in HTML format. Request a new one and choose JSON as the format.' : 'No saved posts or follower lists in there. When you request the download, tick Saved, Likes and Followers and following.'}; refreshImp(); return; }
-  UI.imp = {status: 'ready', res}; refreshImp();
+  if (!any) {
+    setImp({status: 'error', msg: res.html ? 'This download is in HTML format. Request a new one from Instagram and choose JSON as the format.'
+      : other && !res.files ? 'That file isn’t an Instagram download. Pick the ZIP from Instagram (its name usually starts with “instagram”), or the JSON files inside it.'
+      : 'No saved posts or follower lists in there. When you request the download, tick Saved, Likes and Followers and following.'});
+    return;
+  }
+  setImp({status: 'ready', res});
 }
 const fixJson = t => t.charCodeAt(0) === 0xFEFF ? t.slice(1) : t;
 function refreshImp() { const el = $('#impres'); if (el) el.innerHTML = impHTML(); }
+const PICK = {on: false, away: false, timer: 0};
+function pickHelp(show) {
+  const el = $('#pickhelp'); if (!el) return;
+  el.innerHTML = show ? `<div class="err" role="alert"><b>Your files didn’t open.</b> Some apps don’t let a page open files. Open this same page in your phone’s browser${Store.kind === 'db' ? ', or on a computer,' : ''} and import there.${Store.kind === 'db' ? ' Your library is saved to your Claude account, so it shows up here too.' : ''}</div>` : '';
+}
+function pickStart() { PICK.on = true; PICK.away = false; clearTimeout(PICK.timer); pickHelp(false); PICK.timer = setTimeout(() => { if (PICK.on && !PICK.away && matchMedia('(pointer: coarse)').matches) pickHelp(true); }, 2500); }
+function pickAway() { if (PICK.on) { PICK.away = true; pickHelp(false); } }
+function pickDone() { PICK.on = false; clearTimeout(PICK.timer); pickHelp(false); }
+addEventListener('blur', pickAway);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pickAway(); });
+document.addEventListener('click', e => { const id = e.target && e.target.id; if (id === 'impfile' || id === 'impdir' || id === 'restore') pickStart(); }, true);
+document.addEventListener('cancel', e => { const id = e.target && e.target.id; if (id === 'impfile' || id === 'impdir' || id === 'restore') pickDone(); }, true);
 function mergeImport() {
   const r = UI.imp.res; const colsOn = $('#imp-cols') ? $('#imp-cols').checked : false; const rulesOn = $('#imp-rules') ? $('#imp-rules').checked : true;
   if (S.mode === 'demo') { S = blank(); G = G0(); SORT.built = false; SORT.undo = []; }
@@ -1635,7 +1776,7 @@ const ACT = {
   backup: () => offerFile(`savepoint-backup-${dayKey(new Date())}.json`, backupJSON(), 'application/json'),
   csv: () => offerFile(`savepoint-${dayKey(new Date())}.csv`, csv(), 'text/csv'),
   erase: () => { UI.erase = true; vData(); }, 'erase-no': () => { UI.erase = false; vData(); },
-  'erase-yes': async () => { UI.erase = false; try { await Store.eraseAll(); } catch (e) { toast('Couldn’t erase everything. Try again.'); return; } S = makeDemo(); G = demoGame(); SORT.built = false; SORT.undo = []; toast('Your data is erased. Showing the sample again.'); renderChrome(); vData(); },
+  'erase-yes': async () => { UI.erase = false; UI.imp = null; try { await Store.eraseAll(); } catch (e) { toast('Couldn’t erase everything. Try again.'); return; } S = makeDemo(); G = demoGame(); SORT.built = false; SORT.undo = []; toast('Your data is erased. Showing the sample again.'); renderChrome(); vData(); },
 };
 function closeSkinMenu() { const m = $('#skinmenu'); if (m && !m.hidden) { m.hidden = true; $('#skinbtn').setAttribute('aria-expanded', 'false'); } }
 document.addEventListener('click', e => {
@@ -1658,9 +1799,9 @@ document.addEventListener('change', e => {
   else if (t.id === 'fsort') { UI.sort = t.value; renderResults(); }
   else if (t.id === 'sorder') { SORT.order = t.value; buildQueue(); renderStage(true); }
   else if (t.id === 'bulkmove' && t.value) { const b = t.value === '_none' ? null : t.value; let n = 0; for (const id of UI.sel) { const it = S.items.get(id); if (it && it.board !== b) { if (!it.board && b) { G.c.filed++; n++; } it.board = b; it.filedAt = b ? nowS() : 0; markItem(id); } } if (n) { touchDay(); award(5 * n); } toast(`Moved ${plural(UI.sel.size, 'save')}`); UI.sel.clear(); renderResults(); renderChrome(); }
-  else if (t.id === 'impfile' && t.files.length) { runImport([...t.files], false); t.value = ''; }
-  else if (t.id === 'impdir' && t.files.length) { runImport([...t.files].filter(f => kindOf(f.webkitRelativePath || f.name)), true); t.value = ''; }
-  else if (t.id === 'restore' && t.files.length) { restore(t.files[0]); t.value = ''; }
+  else if (t.id === 'impfile') { const f = [...(t.files || [])]; t.value = ''; if (f.length) runImport(f, false); else pickDone(); }
+  else if (t.id === 'impdir') { const f = [...(t.files || [])]; t.value = ''; const keep = f.filter(x => kindOf(x.webkitRelativePath || x.name)); if (keep.length) runImport(keep, true); else if (f.length) setImp({status: 'error', msg: 'No Instagram data files in that folder. Choose the folder you unzipped from Instagram’s download.'}); else pickDone(); }
+  else if (t.id === 'restore') { const f = t.files && t.files[0]; t.value = ''; pickDone(); if (f) restore(f); }
 });
 document.addEventListener('submit', e => {
   e.preventDefault(); const f = e.target;
@@ -1688,12 +1829,19 @@ document.addEventListener('keydown', e => {
 applySkin(SET.skin);
 S = makeDemo(); G = demoGame();
 route();
+async function reloadFromStore() {
+  let data = null; try { data = await Store.loadAll(); } catch (e) { return; }
+  if (!data || Store.dirty() || Store.writing) return;
+  const open = UI.drawer; hydrate(data); SORT.built = false; UI.drawer = open && S.items.has(open) ? open : null;
+  route(); renderDrawer(); toast('Updated with changes from your other device');
+}
 Store.init().then(async () => {
   let data = null;
   try { data = await Store.loadAll(); } catch (e) { toast('Couldn’t load your saved library. Reload to try again.'); }
   UI.loading = false;
-  if (data) { hydrate(data); SORT.built = false; }
+  if (data) { hydrate(data); Store.rev = data.meta.rev || ''; SORT.built = false; }
   route(); setSave('idle');
+  Store.watch();
 });
 })();
 </script>

@@ -53,13 +53,34 @@ Your download is read on your own device. Savepoint stores only the list of save
 
 When it runs outside claude.ai, Savepoint saves to local storage and can show Instagram's own post embed in the details panel.
 
+## Importing on a phone
+
+- Pick the ZIP exactly as Instagram gave it. Savepoint recognizes files by their contents, so it works even when the phone hands it over without a `.zip` name.
+- Savepoint reads only the few data files it needs from inside the ZIP. A large download that includes photos and videos still opens.
+- If tapping **Tap to choose your Instagram ZIP** doesn't open your files inside the Claude app, open the same page in your phone's browser or on a computer and import there. Your library is saved to your Claude account, so it shows up in the app too, including on a page that's already open.
+
 ## Tests
 
 ```sh
-node tests/parser.test.js
+node tests/parser.test.js                    # parser, 22 checks
+python3 tests/make_fixtures.py /tmp/fx        # fake Instagram downloads (fictional accounts)
+./scripts/build.sh && node tests/e2e.js /tmp/fx   # every screen and control, 111 checks
 ```
 
-This runs the Instagram export parser against sample files in the formats Instagram has used: classic and label-based saved posts, sequential and nested collections, followers split across files, and garbled emoji in collection names.
+`parser.test.js` runs the Instagram export parser against sample files in the formats Instagram has used: classic and label-based saved posts, sequential and nested collections, followers split across files, captions, and garbled emoji in collection names.
+
+`e2e.js` drives the app in a real browser three ways:
+
+- **Android-size phone, as on claude.ai.** A stand-in for account storage enforces its rules: per-person paths, the 256 KiB document limit, no nested lists.
+- **Desktop, standalone page.**
+- **A full 60-second sprint on a fast clock.**
+
+It covers:
+
+- **Importing** a ZIP with no file extension, a very large ZIP format (66,000 files), an uncompressed ZIP, several JSON files at once, a renamed JSON file, an unzipped folder, and drag and drop.
+- **Rejecting clearly** an HTML-format download, a half-downloaded ZIP and an unrelated file.
+- **Every control:** library filters, search, sorting, bulk actions, the details panel, Sort mode keys and buttons, boards, rules, people, stats, trophies, looks, backup, CSV, restore and erase.
+- **Sync and layout:** changes arriving from another device, and no sideways scrolling on any page.
 
 ## Layout
 
