@@ -1,0 +1,401 @@
+<title>What to Build Next</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Audiowide&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Cormorant+Garamond:wght@600;700&family=Geist:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Manrope:wght@500;700&display=swap">
+<style>
+/* Layout: blueprint ground; intro, your workshop, the top pick, then a ranked grid of idea cards.
+   Each card opens with a concept sketch drawn in the palette of the project it grows from. */
+:root{
+  color-scheme:dark;
+  --bg:#0e1322;--grid:rgba(140,170,255,.07);--panel:#151b2e;--panel2:#1b2340;--line:#2a3456;--ink:#e8ecf6;--muted:#a9b2ca;--accent:#ff9d5c;--accent-ink:#1d0e02;
+  --display:"Bricolage Grotesque","Space Grotesk",system-ui,sans-serif;--body:"Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#eef1f7;--grid:rgba(40,60,120,.08);--panel:#ffffff;--panel2:#f3f5fb;--line:#d3d9e8;--ink:#141a2b;--muted:#4b5570;--accent:#b8480c;--accent-ink:#ffffff;color-scheme:light}}
+:root[data-theme="light"]{--bg:#eef1f7;--grid:rgba(40,60,120,.08);--panel:#ffffff;--panel2:#f3f5fb;--line:#d3d9e8;--ink:#141a2b;--muted:#4b5570;--accent:#b8480c;--accent-ink:#ffffff;color-scheme:light}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px;color:var(--ink);font:16px/1.6 var(--body);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding-block:clamp(28px,5vw,64px) 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:clamp(28px,4vw,48px)}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance;letter-spacing:-.02em}
+h1{font-size:clamp(40px,7vw,76px);font-weight:800}
+h2{font-size:clamp(24px,3vw,30px);font-weight:700}
+h3{font-size:19px;font-weight:700}
+p{margin:0}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.label{font:600 12px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:clamp(17px,2vw,19px);color:var(--muted);max-width:62ch;margin-top:16px}
+header{display:grid;gap:4px}
+.shop{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.shop a{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-size:14.5px;font-weight:500}
+.shop a:hover{border-color:var(--accent)}
+.shop a i{width:9px;height:9px;border-radius:3px;background:var(--c)}
+.pick{display:grid;gap:20px;grid-template-columns:minmax(0,1fr);padding:clamp(18px,3vw,28px);border-radius:22px;background:var(--panel);border:1px solid var(--line)}
+@media(min-width:880px){.pick{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);align-items:center}}
+.pick ul{margin:12px 0 0;padding-left:1.15em;display:grid;gap:6px;color:var(--muted)}
+.pick ul b{color:var(--ink)}
+.tag{display:inline-block;font:600 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent);padding:4px 10px;border-radius:999px;margin-bottom:12px}
+.ideas{display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
+@media(min-width:900px){.ideas{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.idea{display:grid;grid-template-rows:auto 1fr;border-radius:22px;background:var(--panel);border:1px solid var(--line);overflow:hidden}
+.ibody{display:grid;gap:12px;align-content:start;padding:20px 22px 24px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.rank{font:700 14px var(--mono);color:var(--accent)}
+.eff{font:500 13px var(--mono);color:var(--muted)}
+.pitch{font-size:16.5px}
+.from{font-size:14px;color:var(--muted)}
+.from a{color:var(--ink);text-decoration-color:var(--line);text-underline-offset:3px}
+.from a:hover{color:var(--accent)}
+.feat{margin:0;padding-left:1.15em;display:grid;gap:5px;font-size:15px;color:var(--muted)}
+.feat li::marker{color:var(--accent)}
+.fun{font-size:15px;padding:10px 14px;border-radius:12px;background:var(--panel2)}
+.fun b{color:var(--accent)}
+.next{display:grid;gap:16px}
+.nextgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}
+.nextgrid div{padding:16px;border-radius:16px;background:var(--panel);border:1px solid var(--line);display:grid;gap:6px}
+.nextgrid p{font-size:14.5px;color:var(--muted)}
+footer{padding:22px;border-radius:22px;border:1px dashed var(--line);display:grid;gap:6px}
+footer p{color:var(--muted)}
+
+/* ---------- concept sketches: fixed palettes, borrowed from each parent project ---------- */
+.mock{position:relative;aspect-ratio:16/10;max-width:100%;overflow:hidden;font-size:11px;line-height:1.25;isolation:isolate}
+.mock *{box-sizing:border-box}
+/* Night Arcade */
+.m-arcade{background:#0a0420;color:#fff6e6;font-family:"Jost",system-ui,sans-serif;padding:14px;display:grid;grid-template-rows:auto 1fr;gap:10px;background-image:radial-gradient(600px 260px at 100% 0,rgba(255,43,214,.22),transparent 60%),linear-gradient(rgba(0,240,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,.06) 1px,transparent 1px);background-size:auto,22px 22px,22px 22px}
+.ma-top{display:flex;justify-content:space-between;align-items:center;font-family:"Audiowide",sans-serif;letter-spacing:.08em}
+.ma-logo{font-size:15px;color:#b9fbff;text-shadow:0 0 10px #00b3ff}
+.ma-lv{font-size:10.5px;color:#05021a;background:#00f0ff;padding:3px 8px;border-radius:999px}
+.ma-body{display:grid;grid-template-columns:1.35fr 1fr;gap:10px;min-height:0}
+.ma-games{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ma-g{border-radius:10px;background:linear-gradient(140deg,var(--g1),var(--g2));position:relative;overflow:hidden;box-shadow:0 0 14px color-mix(in srgb,var(--g1) 45%,transparent)}
+.ma-g::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 2px,transparent 2px 5px)}
+.ma-g span{position:absolute;left:7px;right:5px;bottom:6px;font-family:"Audiowide",sans-serif;font-size:clamp(8px,1.9vw,10.5px);line-height:1.1;color:#0a0420;letter-spacing:.02em}
+.ma-board{border-radius:12px;border:1px solid rgba(0,240,255,.35);background:rgba(20,10,56,.7);padding:10px;display:grid;align-content:space-between;gap:6px}
+.ma-h{font-family:"Audiowide",sans-serif;color:#ff7bf0;font-size:11px;letter-spacing:.1em}
+.ma-board ol{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.ma-board li{display:grid;grid-template-columns:16px 1fr auto;gap:6px;font-size:11.5px}
+.ma-board li b{color:#7dff3a}.ma-board li i{font-style:normal;font-family:"JetBrains Mono",monospace;color:#b9fbff}
+.ma-btn{display:block;text-align:center;padding:7px;border-radius:999px;font-weight:700;font-size:10.5px;letter-spacing:.1em;color:#fff;background:linear-gradient(90deg,#ff2bd6,#8a2bff 55%,#00c2ff)}
+/* Star Atlas (Synastria) */
+.m-atlas{background:#0c1a20;background-image:radial-gradient(500px 240px at 75% -20%,#173640,transparent 65%);color:#eef2ea;font-family:"Manrope",system-ui,sans-serif}
+.m-atlas svg{position:absolute;inset:0;width:100%;height:100%}
+.m-atlas .ttl{font-family:"Cormorant Garamond",Georgia,serif;font-weight:700}
+.sky-card{position:absolute;right:14px;top:14px;width:24%;aspect-ratio:9/16;border-radius:10px;background:linear-gradient(180deg,#183039,#0c1a20);border:1px solid #2a4954;display:grid;place-content:center;text-align:center;gap:4px;padding:6px}
+.sky-card b{font-family:"Cormorant Garamond",serif;font-size:15px;color:#f2c94c}
+.sky-card span{font-size:9.5px;color:#aec2c2}
+.moon{width:58px;height:58px;border-radius:50%;background:#0c1a20;box-shadow:inset -16px 0 0 0 #eef2ea;border:1px solid #2a4954}
+.ds{position:absolute;inset:0;padding:16px;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.ds-main{display:grid;gap:8px}
+.ds-main .ttl{font-size:24px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips span{padding:3px 8px;border-radius:999px;border:1px solid #2a4954;background:#183039;font-size:10.5px}
+.chips .g{border-color:#f2c94c;color:#f2c94c}.chips .r{border-color:#ff8fa3;color:#ff8fa3}.chips .s{border-color:#7cc6fe;color:#7cc6fe}
+.ds-foot{display:flex;gap:8px;align-items:center;font-size:10.5px;color:#aec2c2}
+.ds-btn{padding:5px 10px;border-radius:999px;background:#f2c94c;color:#241a00;font-weight:700}
+/* Kinetic */
+.m-kinetic{background:#07070a;color:#fff;font-family:"Geist",system-ui,sans-serif;display:grid;grid-template-columns:auto 1fr;gap:16px;padding:14px 18px;align-items:center}
+.phone{height:100%;max-height:100%;aspect-ratio:9/16;border-radius:14px;outline:1px solid rgba(255,255,255,.16);position:relative;overflow:hidden;background:radial-gradient(55% 40% at 50% 34%,rgba(255,77,46,.75),transparent 70%),radial-gradient(50% 40% at 80% 90%,rgba(255,176,46,.6),transparent 70%),linear-gradient(180deg,#141419,#050507)}
+.phone::before{content:"";position:absolute;left:50%;bottom:16%;translate:-50% 0;width:44%;height:40%;border-radius:50% 50% 8px 8px/40% 40% 8px 8px;background:linear-gradient(155deg,#34343f,#0e0e13 70%);box-shadow:0 0 30px -8px #ffb02e}
+.safe{position:absolute;inset:9% 14% 20% 7%;border:1.5px dashed #d4ff3a;border-radius:6px;opacity:.85}
+.cap{position:absolute;left:10%;right:18%;bottom:24%;text-align:center;font-weight:700;font-size:10px;background:rgba(0,0,0,.65);border-radius:4px;padding:3px}
+.k-side{display:grid;gap:10px;align-content:center}
+.k-side .h{font-size:17px;font-weight:600;letter-spacing:-.02em}
+.k-chips{display:flex;flex-wrap:wrap;gap:6px}
+.k-chips span{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.72);font-size:11px}
+.k-chips .on{background:#fff;color:#000}
+.k-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.k-btn{padding:7px 12px;border-radius:10px;background:#d4ff3a;color:#07070a;font-weight:600;font-size:11px}
+.k-pill{font-family:"Geist Mono",monospace;font-size:10.5px;color:#d4ff3a;border:1px solid rgba(212,255,58,.3);background:rgba(212,255,58,.08);padding:4px 9px;border-radius:999px}
+/* Savepoint Done List */
+.m-done{background:#0a0420;color:#fff6e6;font-family:"Jost",system-ui,sans-serif;padding:14px;display:grid;grid-template-rows:auto 1fr;gap:10px}
+.dl-top{display:flex;justify-content:space-between;align-items:center}
+.dl-top b{font-family:"Audiowide",sans-serif;font-size:14px;letter-spacing:.06em;color:#b9fbff}
+.dl-top span{font-size:11px;color:#ffd23f}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.day{border-radius:8px;background:#130a35;border:1px solid #33266b;padding:5px;display:grid;align-content:start;gap:4px}
+.day>span{font-size:9.5px;color:#c0b5e2;letter-spacing:.08em;text-transform:uppercase}
+.it{border-radius:5px;padding:3px 4px;font-size:9.5px;line-height:1.15;background:color-mix(in srgb,var(--c) 26%,#130a35);border-left:0;color:#fff6e6;overflow:hidden}
+.it.done{text-decoration:line-through;opacity:.6}
+/* Creator Digest */
+.m-digest{background:#0b1116;color:#e6f0f2;font-family:"Inter",system-ui,sans-serif;padding:14px;display:grid;grid-template-rows:auto 1fr;gap:10px}
+.dg-top{display:flex;justify-content:space-between;align-items:center}
+.dg-top b{font-size:15px}
+.dg-top span{font-family:"JetBrains Mono",monospace;font-size:10px;color:#4fd1c5;border:1px solid rgba(79,209,197,.4);padding:3px 8px;border-radius:999px}
+.dg-list{display:grid;gap:7px;align-content:start}
+.dg{display:grid;grid-template-columns:28px 1fr auto;gap:9px;align-items:center;padding:7px 9px;border-radius:10px;background:#121b22;border:1px solid #1f2d36}
+.dg i{width:28px;height:28px;border-radius:50%;background:linear-gradient(140deg,var(--a),var(--b))}
+.dg p{font-size:10.5px;color:#9fb3ba}.dg p b{color:#e6f0f2;font-weight:600}
+.dg em{font-style:normal;font-size:10px;font-weight:600;padding:4px 8px;border-radius:8px;background:#4fd1c5;color:#04211e;white-space:nowrap}
+/* AI Plan Picker */
+.m-plan{background:#f6f7fb;color:#15171c;font-family:"Inter",system-ui,sans-serif;padding:14px 16px;display:grid;grid-template-rows:auto 1fr auto;gap:10px}
+.pl-top{display:flex;justify-content:space-between;align-items:baseline}
+.pl-top b{font-size:15px}
+.pl-top span{font-size:10.5px;color:#5c6070}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:end}
+.plans{align-items:stretch}
+.plan{border-radius:10px;background:#fff;border:1px solid #dfe2ec;padding:8px;display:flex;flex-direction:column;gap:5px;min-height:0}
+.plan::before{content:"";flex-grow:calc(100 - var(--h))}
+.plan.best{border:2px solid #5b5bd6;box-shadow:0 6px 20px rgba(91,91,214,.18)}
+.plan .bar{flex-grow:var(--h);min-height:6px;border-radius:5px 5px 2px 2px;background:#c9cbe8}
+.plan.best .bar{background:#5b5bd6}
+.plan b{font-size:11.5px}.plan span{font-size:10px;color:#5c6070}
+.pl-foot{display:flex;gap:8px;align-items:center;font-size:11px;padding:7px 10px;border-radius:9px;background:#e9e9fb;color:#2c2c7a}
+.pl-foot b{color:#5b5bd6}
+/* Level Forge */
+.m-forge{background:#0a0420;color:#fff6e6;font-family:"Jost",system-ui,sans-serif;padding:12px;display:grid;grid-template-columns:auto 1fr;gap:10px}
+.palette{display:grid;gap:6px;align-content:start}
+.palette i{width:22px;height:22px;border-radius:5px;background:var(--c);box-shadow:0 0 8px color-mix(in srgb,var(--c) 50%,transparent)}
+.palette i.on{outline:2px solid #fff;outline-offset:2px}
+.fg-main{display:grid;grid-template-rows:auto 1fr;gap:8px;min-height:0}
+.fg-top{display:flex;justify-content:space-between;align-items:center;font-family:"Audiowide",sans-serif;font-size:12px;letter-spacing:.06em}
+.fg-top span{font-family:"Jost",sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;padding:4px 9px;border-radius:999px;background:#7dff3a;color:#0a0420}
+.tiles{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));grid-auto-rows:1fr;gap:2px;border-radius:8px;overflow:hidden;background:rgba(0,240,255,.07);padding:3px;align-content:stretch}
+.tiles i{border-radius:2px;background:var(--c,transparent)}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="label">Built from your own projects</p>
+  <h1>What to build next</h1>
+  <p class="lede">Eight ideas that grow out of things you’ve already made: your Night Arcade games, Synastria, Kinetic, and Savepoint. Each card has a quick concept sketch in the style of the project it builds on. They’re ranked by what I’d build first.</p>
+</header>
+
+<section aria-labelledby="shop-h" style="display:grid;gap:12px">
+  <h2 id="shop-h" class="label" style="font-family:var(--mono);font-size:12px;letter-spacing:.12em">Your workshop so far</h2>
+  <div class="shop">
+    <a href="https://claude.ai/artifact/7kJG9uC59nBhzq5JfrWx5V" target="_blank" rel="noopener" style="--c:#00f0ff"><i></i>Savepoint (new)</a>
+    <a href="https://claude.ai/artifact/EGidGkexod6wc2EuAYpnS1" target="_blank" rel="noopener" style="--c:#ff2bd6"><i></i>Skyline Leap</a>
+    <a href="https://claude.ai/artifact/LRBpwNFNptFEaX8iNjythN" target="_blank" rel="noopener" style="--c:#7dff3a"><i></i>Chopper Cave</a>
+    <a href="https://claude.ai/artifact/3ciXLSpPepWsrjBTR6ib9U" target="_blank" rel="noopener" style="--c:#ffd23f"><i></i>Sandblade Siege</a>
+    <a href="https://claude.ai/artifact/9mHLkvD19WvjoTBnFbjdTn" target="_blank" rel="noopener" style="--c:#3ad6ff"><i></i>Iron Sector</a>
+    <a href="https://claude.ai/artifact/F7oeUbgVEL9JjhHifCbasM" target="_blank" rel="noopener" style="--c:#f2c94c"><i></i>Synastry Score</a>
+    <a href="https://claude.ai/artifact/FejJo68zzrFyAkskRyEqKG" target="_blank" rel="noopener" style="--c:#d4ff3a"><i></i>Kinetic</a>
+    <a href="https://claude.ai/artifact/AHFWru1VGMuVqCwLKBxZoH" target="_blank" rel="noopener" style="--c:#a78bfa"><i></i>Is Fable 5.2 Worth $20?</a>
+    <a href="https://claude.ai/artifact/LAtdY9qcr6tPmc9HDrKJaX" target="_blank" rel="noopener" style="--c:#4fd1c5"><i></i>Agent Reach on Windows</a>
+  </div>
+</section>
+
+<section class="pick" aria-labelledby="pick-h">
+  <div>
+    <span class="tag">Top pick</span>
+    <h2 id="pick-h">Start with the Night Arcade Hub</h2>
+    <ul>
+      <li><b>You already have six games.</b> A hub makes all of them more fun without writing a new game.</li>
+      <li><b>Savepoint’s pieces carry straight over.</b> XP, levels, achievements and saved progress are already built.</li>
+      <li><b>Leaderboards give friends a reason to share your link</b>, and a daily challenge brings them back.</li>
+    </ul>
+  </div>
+  <div class="mock m-arcade" aria-hidden="true" style="border-radius:16px">
+    <div class="ma-top"><span class="ma-logo">NIGHT ARCADE</span><span class="ma-lv">LV 7</span></div>
+    <div class="ma-body">
+      <div class="ma-games"><div class="ma-g" style="--g1:#ff2bd6;--g2:#8a2bff"><span>SANDBLADE</span></div><div class="ma-g" style="--g1:#00f0ff;--g2:#2b5bff"><span>IRON SECTOR</span></div><div class="ma-g" style="--g1:#7dff3a;--g2:#00a86b"><span>CHOPPER CAVE</span></div><div class="ma-g" style="--g1:#ffd23f;--g2:#ff5a36"><span>SKYLINE LEAP</span></div></div>
+      <div class="ma-board"><p class="ma-h">DAILY SEED</p><ol><li><b>1</b>you<i>18,420</i></li><li><b>2</b>friend<i>17,905</i></li><li><b>3</b>friend<i>12,110</i></li></ol><span class="ma-btn">PLAY TODAY’S RUN</span></div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="ideas-h" style="display:grid;gap:18px">
+  <h2 id="ideas-h">All eight, ranked</h2>
+  <div class="ideas">
+
+  <article class="idea">
+    <div class="mock m-arcade" aria-hidden="true">
+      <div class="ma-top"><span class="ma-logo">NIGHT ARCADE</span><span class="ma-lv">LV 7 · 2,340 XP</span></div>
+      <div class="ma-body">
+        <div class="ma-games"><div class="ma-g" style="--g1:#ff2bd6;--g2:#8a2bff"><span>SANDBLADE</span></div><div class="ma-g" style="--g1:#00f0ff;--g2:#2b5bff"><span>IRON SECTOR</span></div><div class="ma-g" style="--g1:#7dff3a;--g2:#00a86b"><span>CHOPPER CAVE</span></div><div class="ma-g" style="--g1:#ffd23f;--g2:#ff5a36"><span>SKYLINE LEAP</span></div></div>
+        <div class="ma-board"><p class="ma-h">ACHIEVEMENTS</p><ol><li><b>✓</b>Sand Lord<i>+50</i></li><li><b>✓</b>No-hit run<i>+50</i></li><li><b>·</b>Sky high<i>3/5</i></li></ol><span class="ma-btn">CONTINUE</span></div>
+      </div>
+    </div>
+    <div class="ibody">
+      <div class="meta"><span class="rank">#1</span><span class="eff">1–2 weekends</span></div>
+      <h3>Night Arcade Hub</h3>
+      <p class="pitch">One home for all your games, with a shared profile, leaderboards and a daily challenge, so friends have a reason to come back every night.</p>
+      <p class="from">Builds on <a href="https://claude.ai/artifact/3ciXLSpPepWsrjBTR6ib9U" target="_blank" rel="noopener">Sandblade</a>, <a href="https://claude.ai/artifact/9mHLkvD19WvjoTBnFbjdTn" target="_blank" rel="noopener">Iron Sector</a>, <a href="https://claude.ai/artifact/LRBpwNFNptFEaX8iNjythN" target="_blank" rel="noopener">Chopper Cave</a> and <a href="https://claude.ai/artifact/EGidGkexod6wc2EuAYpnS1" target="_blank" rel="noopener">Skyline Leap</a></p>
+      <ul class="feat"><li>A launcher with cover art and where you left off</li><li>Leaderboards for each game that everyone who opens the page shares</li><li>XP, levels and achievements that count across every game</li><li>A daily challenge: the same level seed for everyone, one try</li></ul>
+      <p class="fun"><b>The fun part:</b> beating a friend on today’s seed. Your games already share a music player, so the hub makes them feel like one console.</p>
+    </div>
+  </article>
+
+  <article class="idea">
+    <div class="mock m-atlas" aria-hidden="true">
+      <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid meet">
+        <text x="16" y="30" class="ttl" style="font-size:20px" fill="#eef2ea">Your circle</text>
+        <text x="16" y="46" style="font-size:9px" fill="#aec2c2">5 people · 10 connections</text>
+        <g stroke-linecap="round" fill="none">
+          <line x1="120" y1="108" x2="58" y2="70" stroke="#f2c94c" stroke-width="3"/>
+          <line x1="120" y1="108" x2="186" y2="150" stroke="#7cc6fe" stroke-width="2"/>
+          <line x1="58" y1="70" x2="182" y2="62" stroke="#7cc6fe" stroke-width="1.5"/>
+          <line x1="182" y1="62" x2="186" y2="150" stroke="#ff6b5b" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <line x1="120" y1="108" x2="62" y2="160" stroke="#f2c94c" stroke-width="2"/>
+          <line x1="62" y1="160" x2="58" y2="70" stroke="#ff6b5b" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <line x1="120" y1="108" x2="182" y2="62" stroke="#ff8fa3" stroke-width="1.5"/>
+        </g>
+        <g fill="#eef2ea">
+          <circle cx="120" cy="108" r="7" fill="#f2c94c"/><circle cx="58" cy="70" r="5"/><circle cx="182" cy="62" r="5"/><circle cx="186" cy="150" r="5"/><circle cx="62" cy="160" r="5"/>
+        </g>
+        <g style="font-size:10px" fill="#eef2ea">
+          <text x="132" y="112">You</text><text x="28" y="66">Mia</text><text x="192" y="58">Jordan</text><text x="194" y="160">Ari</text><text x="30" y="178">Sam</text>
+        </g>
+        <g style="font-size:8.5px" fill="#aec2c2"><text x="16" y="194">gold: strongest bond · blue: easy · coral: friction</text></g>
+      </svg>
+      <div class="sky-card"><b>Our circle</b><span>The anchor: You<br>The spark: Ari</span></div>
+    </div>
+    <div class="ibody">
+      <div class="meta"><span class="rank">#2</span><span class="eff">1–2 weeks</span></div>
+      <h3>Synastria Circles</h3>
+      <p class="pitch">Compatibility for a whole friend group. Everyone adds their birth details and the app draws your group as a constellation.</p>
+      <p class="from">Builds on Synastria and <a href="https://claude.ai/artifact/F7oeUbgVEL9JjhHifCbasM" target="_blank" rel="noopener">Synastry Score</a></p>
+      <ul class="feat"><li>A group chart for 3 to 8 people, with the strongest bonds drawn brightest</li><li>Roles in the group: the anchor, the spark, the peacekeeper</li><li>The best and hardest pairs, with the placements behind each</li><li>A card sized for Instagram Stories</li></ul>
+      <p class="fun"><b>The fun part:</b> dropping the group card in the group chat and arguing about who’s the chaos.</p>
+    </div>
+  </article>
+
+  <article class="idea">
+    <div class="mock m-kinetic" aria-hidden="true">
+      <div class="phone"><span class="safe"></span><span class="cap">POV: the cat meets the vacuum</span></div>
+      <div class="k-side"><span class="h">Make it a Reel</span>
+        <div class="k-chips"><span class="on">Crash Zoom</span><span>360 Orbit</span><span>Explode</span><span>Bullet Time</span></div>
+        <div class="k-row"><span class="k-pill">Batch · 8 photos</span><span class="k-pill">9:16</span></div>
+        <div class="k-row"><span class="k-btn">Export for Reels</span></div></div>
+    </div>
+    <div class="ibody">
+      <div class="meta"><span class="rank">#3</span><span class="eff">About a week on top of Kinetic</span></div>
+      <h3>Kinetic Reels</h3>
+      <p class="pitch">Kinetic’s effects, made for Reels and TikTok, with vertical video, captions and safe zones built in.</p>
+      <p class="from">Builds on <a href="https://claude.ai/artifact/FejJo68zzrFyAkskRyEqKG" target="_blank" rel="noopener">Kinetic</a></p>
+      <ul class="feat"><li>9:16 export, with the Reels and TikTok safe zones shown while you edit</li><li>Caption overlays in a few styles</li><li>Batch mode: one effect across a whole photo set</li><li>Templates for formats people already post</li></ul>
+      <p class="fun"><b>The fun part:</b> a finished Reel from one photo in under a minute.</p>
+    </div>
+  </article>
+
+  <article class="idea">
+    <div class="mock m-done" aria-hidden="true">
+      <div class="dl-top"><b>THIS WEEK</b><span>4-day streak</span></div>
+      <div class="week">
+        <div class="day"><span>Mon</span><i class="it done" style="--c:#e76624">Miso pasta</i><i class="it" style="--c:#0aac23">Leg day</i></div>
+        <div class="day"><span>Tue</span><i class="it done" style="--c:#0aac23">Desk mobility</i></div>
+        <div class="day"><span>Wed</span><i class="it" style="--c:#e76624">Crispy rice salad</i></div>
+        <div class="day"><span>Thu</span><i class="it" style="--c:#0aac23">Run club</i><i class="it" style="--c:#e24d8b">Thrift fit</i></div>
+        <div class="day"><span>Fri</span><i class="it" style="--c:#00a888">Night market</i></div>
+        <div class="day"><span>Sat</span><i class="it" style="--c:#e76624">Chili noodles</i></div>
+        <div class="day"><span>Sun</span><i class="it" style="--c:#338ced">Shelf build</i></div>
+      </div>
+    </div>
+    <div class="ibody">
+      <div class="meta"><span class="rank">#4</span><span class="eff">A weekend, inside Savepoint</span></div>
+      <h3>Done List</h3>
+      <p class="pitch">Turns saves into plans. Your Recipes board becomes this week’s meals, Travel becomes a trip list, and Workouts become a schedule.</p>
+      <p class="from">Builds on <a href="https://claude.ai/artifact/7kJG9uC59nBhzq5JfrWx5V" target="_blank" rel="noopener">Savepoint</a></p>
+      <ul class="feat"><li>Drag saves onto days of the week</li><li>“Did it” check-ins that feed your streak and XP</li><li>A shopping list from the recipes you planned</li><li>A monthly recap of what you actually tried</li></ul>
+      <p class="fun"><b>The fun part:</b> finally cooking the noodles you saved two years ago.</p>
+    </div>
+  </article>
+
+  <article class="idea">
+    <div class="mock m-digest" aria-hidden="true">
+      <div class="dg-top"><b>Sunday brief</b><span>agent · done</span></div>
+      <div class="dg-list">
+        <div class="dg"><i style="--a:#ff9d5c;--b:#e24d8b"></i><p><b>@midnight.noodle.club</b> posted 3 reels: two noodle recipes and a pantry tour</p><em>File to Recipes</em></div>
+        <div class="dg"><i style="--a:#4fd1c5;--b:#338ced"></i><p><b>@wander.with.wren</b> shared a 4-day Lisbon route</p><em>File to Travel</em></div>
+        <div class="dg"><i style="--a:#a78bfa;--b:#0aac23"></i><p><b>@liftwith.lena</b> started a new 6-week program</p><em>File to Gym</em></div>
+      </div>
+    </div>
+    <div class="ibody">
+      <div class="meta"><span class="rank">#5</span><span class="eff">1–2 weeks</span></div>
+      <h3>Creator Digest</h3>
+      <p class="pitch">A weekly brief on the creators you save most. An AI agent gathers their new public posts and sums them up as cards you can file straight into Savepoint.</p>
+      <p class="from">Builds on <a href="https://claude.ai/artifact/7kJG9uC59nBhzq5JfrWx5V" target="_blank" rel="noopener">Savepoint</a> and your <a href="https://claude.ai/artifact/LAtdY9qcr6tPmc9HDrKJaX" target="_blank" rel="noopener">Agent Reach setup</a></p>
+      <ul class="feat"><li>Picks the creators from your Savepoint stats</li><li>Reads public pages only, never your Instagram login</li><li>One tap files a post into a board</li><li>Runs every week on a schedule</li></ul>
+      <p class="fun"><b>The fun part:</b> a five-minute Sunday read in place of an hour of scrolling.</p>
+    </div>
+  </article>
+
+  <article class="idea">
+    <div class="mock m-plan" aria-hidden="true">
+      <div class="pl-top"><b>Which plan fits you?</b><span>from your last 30 days</span></div>
+      <div class="plans">
+        <div class="plan" style="--h:70"><div class="bar"></div><b>Free</b><span>hits limits often</span></div>
+        <div class="plan best" style="--h:92"><div class="bar"></div><b>$20 plan</b><span>covers your use</span></div>
+        <div class="plan" style="--h:48"><div class="bar"></div><b>Pay as you go</b><span>cheaper on light weeks</span></div>
+      </div>
+      <div class="pl-foot"><b>Verdict</b> Keep the $20 plan this month</div>
+    </div>
+    <div class="ibody">
+      <div class="meta"><span class="rank">#6</span><span class="eff">A weekend</span></div>
+      <h3>AI Plan Picker</h3>
+      <p class="pitch">Tracks how you actually use AI each week and tells you which plan is worth paying for.</p>
+      <p class="from">Builds on your deck <a href="https://claude.ai/artifact/AHFWru1VGMuVqCwLKBxZoH" target="_blank" rel="noopener">Is Fable 5.2 Worth $20?</a></p>
+      <ul class="feat"><li>A quick log of what you asked, which model, and how it went</li><li>Compares plans and pay-as-you-go against your real usage</li><li>A monthly verdict: upgrade, stay, or drop down</li><li>A shareable one-slide breakdown</li></ul>
+      <p class="fun"><b>The fun part:</b> settling “is it worth it” with your own numbers.</p>
+    </div>
+  </article>
+
+  <article class="idea">
+    <div class="mock m-forge" aria-hidden="true">
+      <div class="palette"><i style="--c:#00f0ff" class="on"></i><i style="--c:#ff2bd6"></i><i style="--c:#7dff3a"></i><i style="--c:#ffd23f"></i><i style="--c:#33266b"></i></div>
+      <div class="fg-main"><div class="fg-top"><span style="background:none;color:#b9fbff;font-family:'Audiowide',sans-serif;font-size:12px;letter-spacing:.06em;padding:0">LEVEL FORGE · CAVE 01</span><span>PLAY TEST</span></div><div class="tiles" id="tiles"></div></div>
+    </div>
+    <div class="ibody">
+      <div class="meta"><span class="rank">#7</span><span class="eff">2–3 weeks</span></div>
+      <h3>Level Forge</h3>
+      <p class="pitch">A level editor for your arcade games. Build a level, share the link, and anyone can play it.</p>
+      <p class="from">Builds on Night Arcade, <a href="https://claude.ai/artifact/LRBpwNFNptFEaX8iNjythN" target="_blank" rel="noopener">Chopper Cave</a> and <a href="https://claude.ai/artifact/EGidGkexod6wc2EuAYpnS1" target="_blank" rel="noopener">Skyline Leap</a></p>
+      <ul class="feat"><li>A tile painter with your games’ own blocks, hazards and pickups</li><li>Instant play-testing</li><li>Share by link; friends’ levels show up in a browser with likes</li><li>A featured level of the week inside the Arcade Hub</li></ul>
+      <p class="fun"><b>The fun part:</b> making a level so hard your friends message you about it.</p>
+    </div>
+  </article>
+
+  <article class="idea">
+    <div class="mock m-atlas" aria-hidden="true">
+      <div class="ds"><div class="moon"></div>
+        <div class="ds-main"><span class="ttl">Today’s sky</span>
+          <div class="chips"><span class="g">Moon in Leo</span><span class="s">Venus trine your Sun</span><span class="r">Mars square your Moon</span></div>
+          <p style="font-size:12px;color:#aec2c2;max-width:34ch">Good day to start something social. Go easy on arguments after dark.</p>
+          <div class="ds-foot"><span class="ds-btn">Share to story</span><span>7-day streak</span></div></div></div>
+    </div>
+    <div class="ibody">
+      <div class="meta"><span class="rank">#8</span><span class="eff">About a week</span></div>
+      <h3>Daily Sky</h3>
+      <p class="pitch">A daily cosmic-weather card built from your own birth chart and today’s planets, with a streak to keep you coming back.</p>
+      <p class="from">Builds on Synastria and <a href="https://claude.ai/artifact/F7oeUbgVEL9JjhHifCbasM" target="_blank" rel="noopener">Synastry Score</a>, which already calculate real planet positions</p>
+      <ul class="feat"><li>Today’s strongest transits to your chart, in plain words</li><li>Moon phase and one line to focus on</li><li>A streak and a weekly look-back</li><li>A story-sized card to share</li></ul>
+      <p class="fun"><b>The fun part:</b> a two-second ritual every morning.</p>
+    </div>
+  </article>
+
+  </div>
+</section>
+
+<section class="next" aria-labelledby="next-h">
+  <div><p class="label">Already built today</p><h2 id="next-h">Where Savepoint could go next</h2></div>
+  <div class="nextgrid">
+    <div><h3>On your home screen</h3><p>Install it as a phone web app so sorting feels like opening a game.</p></div>
+    <div><h3>Share a board</h3><p>Turn one board, like a Lisbon trip list, into a page you can send to friends.</p></div>
+    <div><h3>Smart filing</h3><p>Claude suggests a board for each save, based on the creator and how you filed similar saves.</p></div>
+    <div><h3>Fresh imports</h3><p>A monthly nudge to pull a new Instagram download, so recent saves land in your inbox.</p></div>
+  </div>
+</section>
+
+<footer>
+  <h2 style="font-size:22px">Pick one</h2>
+  <p>Tell me which idea you want, and I’ll build a working first version the same way Savepoint was built: playable right away, saved to your account, in the style of the project it grows from.</p>
+</footer>
+</div>
+
+<script>
+(() => {
+  const el = document.getElementById('tiles'); if (!el) return;
+  const map = [
+    '################',
+    '#......*.......#',
+    '#.....###...+..#',
+    '#..o.......###.#',
+    '#.####...^.....#',
+    '#......#####...#',
+    '#~~~~..........#',
+    '################'];
+  const col = {'#': '#33266b', '*': '#ffd23f', '+': '#7dff3a', 'o': '#00f0ff', '^': '#ff2bd6', '~': '#ff2bd6'};
+  el.style.gridTemplateRows = `repeat(${map.length},minmax(0,1fr))`;
+  el.innerHTML = map.join('').split('').map(c => `<i${col[c] ? ` style="--c:${col[c]}"` : ''}></i>`).join('');
+})();
+</script>
