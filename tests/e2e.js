@@ -205,7 +205,22 @@ async function artifactRun(browser) {
 
   // Header controls
   for (const sk of ['atlas', 'kinetic', 'arcade']) { await p.click('#skinbtn'); await p.click(`[data-act=skin][data-v=${sk}]`); ok((await p.getAttribute('html', 'data-skin')) === sk && await p.locator('#skinmenu').isHidden(), 'switch look to ' + sk); }
-  await p.click('#soundbtn'); ok((await p.getAttribute('#soundbtn', 'aria-pressed')) === 'true', 'sound toggles on'); await p.click('#soundbtn');
+  await p.click('#skinbtn'); await p.click('#skinmenu [data-act=sound]');
+  ok((await p.getAttribute('#skinmenu [data-act=sound]', 'aria-pressed')) === 'true' && await p.locator('#skinmenu').isVisible(), 'sound switch in the look menu turns on, menu stays open');
+  await p.click('#skinmenu [data-act=sound]'); await p.keyboard.press('Escape'); ok(await p.locator('#skinmenu').isHidden(), 'Escape closes the look menu');
+
+  // Guide
+  await go(p, 'library'); ok(await p.locator('.newhere').count() === 1, 'Library shows the New to Savepoint card');
+  await p.click('#helpbtn'); await p.waitForSelector('.guide');
+  ok(await p.locator('.gsteps > li').count() === 5 && await p.locator('#g-buttons details').count() === 7 && await p.locator('#g-faq h3').count() === 5, 'guide: 5 steps, 7 screens of buttons, 5 questions');
+  ok((await p.getAttribute('#helpbtn', 'aria-current')) === 'page', 'question-mark button shows you are on the guide');
+  ok(await p.evaluate(() => [...document.querySelectorAll('.guide button')].every(b => b.dataset.act === 'gjump')), 'guide has no fake buttons a keyboard can land on');
+  await p.click('[data-act=gjump][data-t=g-faq]'); await p.waitForTimeout(700);
+  ok(await p.locator('#g-faq').evaluate(el => { const r = el.getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0; }), 'jump link scrolls to that section');
+  await p.click('#g-sort summary'); ok(await p.locator('#g-sort').evaluate(d => d.open), 'Sort mode section expands');
+  await p.click('#g-people summary'); ok(await p.locator('#g-people').evaluate(d => d.open), 'tap a screen to expand its buttons');
+  ok((await overflow(p)) <= 0, 'no sideways scrolling on the guide');
+  await go(p, 'library'); ok(await p.locator('.newhere').count() === 0, 'New to Savepoint card goes away after reading the guide');
 
   // Overflow on every page at phone width
   for (const r of ['library', 'sort', 'boards', 'people', 'stats', 'trophies', 'data']) { await go(p, r); ok((await overflow(p)) <= 0, `no sideways scrolling on ${r}`); }
@@ -273,7 +288,7 @@ async function standaloneRun(browser) {
   await go(p, 'data');
   const [d] = await Promise.all([p.waitForEvent('download'), p.click('[data-act=backup]')]);
   ok(JSON.parse(fs.readFileSync(await d.path(), 'utf8')).items.length === 400, 'backup downloads as a file');
-  for (const r of ['library', 'sort', 'boards', 'people', 'stats', 'trophies', 'data']) { await go(p, r); ok((await overflow(p)) <= 0, `no sideways scrolling on ${r} (desktop)`); }
+  for (const r of ['library', 'sort', 'boards', 'people', 'stats', 'trophies', 'data', 'guide']) { await go(p, r); ok((await overflow(p)) <= 0, `no sideways scrolling on ${r} (desktop)`); }
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await ctx.close();
 }

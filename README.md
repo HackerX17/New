@@ -15,7 +15,8 @@ Organize everything you've saved on Instagram into boards, and turn the sorting 
 - **People**: from your followers and following lists, see who doesn't follow you back, who you don't follow back, mutuals, and creators you save a lot but don't follow. Label accounts and work through a review queue.
 - **Stats**: saves per month, top creators, board sizes, reels vs posts, your busiest month, favorite day to save, night-owl saves, and "on this day" flashbacks.
 - **Trophies**: XP, levels with titles, a daily streak and 18 achievements.
-- **Three looks** taken from earlier projects: *Night Arcade* (the arcade games), *Star Atlas* (Synastry Score) and *Kinetic*.
+- **Guide**: the **?** button in the top bar opens a step-by-step guide: a five-step quick start, how to see and add posts, what every button on every screen does, and common questions.
+- **Three looks** taken from earlier projects: *Night Arcade* (the arcade games), *Star Atlas* (Synastry Score) and *Kinetic*. Pick one, and turn sound effects on or off, from the palette button.
 - **Backup**: download a JSON backup or a CSV spreadsheet, and restore from a backup.
 
 ## Getting your Instagram data
@@ -64,7 +65,7 @@ When it runs outside claude.ai, Savepoint saves to local storage and can show In
 ```sh
 node tests/parser.test.js                    # parser, 22 checks
 python3 tests/make_fixtures.py /tmp/fx        # fake Instagram downloads (fictional accounts)
-./scripts/build.sh && node tests/e2e.js /tmp/fx   # every screen and control, 111 checks
+./scripts/build.sh && node tests/e2e.js /tmp/fx   # every screen and control, 122 checks
 ```
 
 `parser.test.js` runs the Instagram export parser against sample files in the formats Instagram has used: classic and label-based saved posts, sequential and nested collections, followers split across files, captions, and garbled emoji in collection names.

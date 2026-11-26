@@ -437,6 +437,48 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   .toast{padding:9px 14px;font-size:14px;box-shadow:0 8px 20px rgba(0,0,0,.4)}
   .toast:not(:last-child){display:none}
 }
+.newhere{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;border-color:color-mix(in srgb,var(--a1) 45%,var(--line))}
+.newhere>div:first-child{display:grid;gap:4px;flex:1 1 240px}
+.soundopt{border-top:1px solid var(--line);border-radius:0 0 12px 12px;margin-top:4px}
+.soundopt>.i{width:22px;height:22px;margin:0 10px}
+.soundopt>span:nth-child(2){flex:1}
+.switch{position:relative;width:44px;height:26px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);flex:none}
+.switch i{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:transform .15s}
+.soundopt[aria-pressed=true] .switch{background:var(--a1);border-color:var(--a1)}
+.soundopt[aria-pressed=true] .switch i{transform:translateX(18px);background:var(--on-a1)}
+a.iconbtn[aria-current=page]{color:var(--a1);border-color:var(--a1)}
+.guide{display:grid;gap:18px;max-width:900px}
+.gsec{display:grid;gap:12px}
+.gsec>h2{margin-top:6px}
+.gtoc{display:flex;flex-wrap:wrap;gap:8px}
+.gsteps{margin:0;padding:0;list-style:none;display:grid;gap:16px;counter-reset:g}
+.gsteps>li{counter-increment:g;display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;align-items:start}
+.gsteps>li::before{content:counter(g);display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--a1);color:var(--on-a1);font:600 16px var(--mono)}
+.gsteps h3{margin:6px 0 4px}
+.gsteps p,.gfaq p{color:var(--muted)}
+.gsteps b,.gdefs b,.gfaq b{color:var(--ink)}
+.gshow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;pointer-events:none}
+.gshow .bpad{min-width:140px;flex:0 1 180px}
+.gshow .cover{width:84px;flex:none}
+.gshow .cover .mono{font-size:28px;left:7px;bottom:4px}
+.gref{display:grid;gap:10px}
+.gref details{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);padding:4px 16px}
+.gref summary{display:flex;align-items:center;gap:10px;min-height:52px;cursor:pointer;font-weight:600;list-style:none}
+.gref summary::-webkit-details-marker{display:none}
+.gref summary::after{content:"+";margin-left:auto;font:600 20px var(--mono);color:var(--a1)}
+.gref details[open] summary::after{content:"–"}
+.gdefs{display:grid;margin:0 0 12px}
+.gdefs>div{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;padding:12px 0;border-top:1px solid var(--line)}
+@media(min-width:720px){.gdefs>div{grid-template-columns:230px minmax(0,1fr);gap:18px;align-items:start}}
+.gdefs dt{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-weight:600;pointer-events:none}
+.gdefs dt .btn,.gdefs dt .chip,.gdefs dt .iconbtn{pointer-events:none}
+.gdefs dd{margin:0;color:var(--muted)}
+.gfaq{display:grid;gap:14px}
+.guide .chip[data-on]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.guide .star[data-on]{color:var(--gold)}.guide .star[data-on] .i{fill:var(--gold)}
+.guide .seg .segb{display:inline-flex;align-items:center;min-height:36px;padding:0 13px;border-radius:9px;color:var(--muted);font-size:14px;font-weight:500}
+.guide .seg .segb[data-on]{background:var(--panel2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.gfaq h3{margin-bottom:4px}
 .appnote{display:grid;gap:10px;padding:14px;border-radius:var(--r);border:1px solid color-mix(in srgb,var(--gold) 55%,transparent);background:color-mix(in srgb,var(--gold) 10%,var(--panel))}
 .appnote b{color:var(--gold)}.appnote p{font-size:14.5px}
 .linkbox{display:block;max-width:100%;padding:8px 10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font:13px var(--mono);overflow-wrap:anywhere;user-select:all;-webkit-user-select:all}
@@ -457,9 +499,9 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   <span class="savechip" id="savechip" data-s="demo" role="status">Sample data</span>
   <span class="spacer"></span>
   <a class="lvl" id="lvl" href="#trophies" aria-label="Your level"></a>
-  <button class="iconbtn" id="soundbtn" data-act="sound" aria-label="Sound effects" aria-pressed="false"></button>
+  <a class="iconbtn" id="helpbtn" href="#guide" aria-label="Guide: how Savepoint works"></a>
   <div class="skinwrap">
-    <button class="iconbtn" id="skinbtn" data-act="skin-menu" aria-label="Change the look" aria-expanded="false" aria-controls="skinmenu"></button>
+    <button class="iconbtn" id="skinbtn" data-act="skin-menu" aria-label="Look and sound" aria-expanded="false" aria-controls="skinmenu"></button>
     <div class="skinmenu" id="skinmenu" hidden></div>
   </div>
   <a class="btn sm imp" href="#data" id="impbtn"></a>
@@ -714,6 +756,7 @@ const ICONS = {
   zap2: '<path d="M4 12h3l2-6 4 12 2-6h5"/>',
   clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.8"/><path d="M12 17.2v.1"/>',
 };
 const ic = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[n] || ''}</svg>`;
 
@@ -995,12 +1038,14 @@ function renderChrome() {
   const cur = UI.route === 'board' ? 'boards' : UI.route;
   $('#rail').innerHTML = NAV.map(([k, l, i]) => `<a href="#${k}" ${cur === k ? 'aria-current="page"' : ''}>${ic(i)}<span>${l}</span>${k === 'sort' && un ? `<span class="badge num">${un > 999 ? '999+' : un}</span>` : ''}</a>`).join('')
     + `<a href="#data" ${cur === 'data' ? 'aria-current="page"' : ''}>${ic('download')}<span>Import &amp; data</span></a>`
+    + `<a href="#guide" ${cur === 'guide' ? 'aria-current="page"' : ''}>${ic('help')}<span>Guide</span></a>`
     + `<p class="rail-foot">Your Instagram export is read on this device. Savepoint keeps only the list of saves and how you organize them.</p>`;
   $('#tabbar').innerHTML = NAV.map(([k, l, i]) => `<a href="#${k}" ${cur === k ? 'aria-current="page"' : ''}>${ic(i)}<span>${l}</span></a>`).join('');
-  $('#soundbtn').innerHTML = ic(SET.sound ? 'soundOn' : 'soundOff'); $('#soundbtn').setAttribute('aria-pressed', String(SET.sound));
+  $('#helpbtn').innerHTML = ic('help'); if (cur === 'guide') $('#helpbtn').setAttribute('aria-current', 'page'); else $('#helpbtn').removeAttribute('aria-current');
   $('#skinbtn').innerHTML = ic('palette');
   $('#impbtn').innerHTML = `${ic('download')}<span>Import</span>`;
-  $('#skinmenu').innerHTML = `<p class="eyebrow" style="padding:6px 10px 4px">Look</p>` + SKINS.map(([k, n, d, g]) => `<button class="skinopt" data-act="skin" data-v="${k}" aria-pressed="${SET.skin === k}"><span class="sk-sw" style="background:${g}"></span><span><b>${n}</b><span class="xs mut">${d}</span></span></button>`).join('');
+  $('#skinmenu').innerHTML = `<p class="eyebrow" style="padding:6px 10px 4px">Look</p>` + SKINS.map(([k, n, d, g]) => `<button class="skinopt" data-act="skin" data-v="${k}" aria-pressed="${SET.skin === k}"><span class="sk-sw" style="background:${g}"></span><span><b>${n}</b><span class="xs mut">${d}</span></span></button>`).join('')
+    + `<button class="skinopt soundopt" data-act="sound" aria-pressed="${SET.sound}">${ic(SET.sound ? 'soundOn' : 'soundOff')}<span><b>Sound effects</b><span class="xs mut">${SET.sound ? 'On: blips when you file and level up' : 'Off'}</span></span><span class="switch" aria-hidden="true"><i></i></span></button>`;
   renderLevel(); setSave();
 }
 function renderLevel() {
@@ -1025,14 +1070,14 @@ const main = $('#main');
 let lastRoute = '';
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  let r = h.startsWith('board-') ? 'board' : (['library', 'sort', 'boards', 'people', 'stats', 'trophies', 'data'].includes(h) ? h : 'library');
+  let r = h.startsWith('board-') ? 'board' : (['library', 'sort', 'boards', 'people', 'stats', 'trophies', 'data', 'guide'].includes(h) ? h : 'library');
   UI.boardId = r === 'board' ? h.slice(6) : '';
   if (r === 'board' && !boardById(UI.boardId)) { r = 'boards'; }
   if (UI.route === 'sort' && r !== 'sort') stopSprint(false);
   const changed = lastRoute !== h; lastRoute = h; UI.route = r;
   if (changed) { UI.shown = 60; UI.pshown = 100; UI.boardEdit = false; UI.boardDel = false; UI.selecting = false; UI.sel.clear(); }
   closeSkinMenu();
-  ({library: vLibrary, board: vLibrary, sort: vSort, boards: vBoards, people: vPeople, stats: vStats, trophies: vTrophies, data: vData})[r]();
+  ({library: vLibrary, board: vLibrary, sort: vSort, boards: vBoards, people: vPeople, stats: vStats, trophies: vTrophies, data: vData, guide: vGuide})[r]();
   renderChrome();
   if (changed) scrollTo(0, 0);
 }
@@ -1081,8 +1126,8 @@ function vLibrary() {
     head = UI.boardEdit ? boardEditForm(b) : `<div class="head"><div><a class="back" href="#boards">${ic('left')}Boards</a><h1 style="display:flex;align-items:center;gap:12px"><span style="width:16px;height:16px;border-radius:5px;background:var(--b${b.color});flex:none"></span>${esc(b.name)}</h1><p class="mut">${plural(its.length, 'save')}${its.filter(i => i.status === 'done').length ? ` · ${its.filter(i => i.status === 'done').length} done` : ''}${b.ig ? ' · from your Instagram collections' : ''}</p></div>
 <div class="head-actions"><button class="btn ghost" data-act="board-edit">${ic('edit')}Edit board</button><a class="btn" href="#sort">${ic('bolt')}Sort more in</a></div></div>`;
   } else {
-    head = `<div class="head"><div><p class="eyebrow">Library</p><h1>Your saves</h1></div><div class="head-actions"><button class="btn ghost" data-act="flashback">${ic('rewind')}Flashback</button><a class="btn" href="#sort">${ic('bolt')}Sort mode</a></div></div>
-${all ? `<section class="panel inbox"><div><p class="eyebrow">Inbox</p><p class="big num">${fmtN(un)}</p><p class="small mut">unsorted ${un === 1 ? 'save' : 'saves'}</p></div><div class="meter"><div class="mbar" role="img" aria-label="${done}% organized"><i style="width:${done}%"></i></div><p class="small mut num">${done}% organized · ${plural(S.boards.length, 'board')} · ${curStreak()}-day streak</p></div>${un ? `<a class="btn" href="#sort">${ic('bolt')}Start sorting</a>` : `<span class="btn ghost" aria-disabled="true">${ic('check')}Inbox zero</span>`}</section>` : ''}`;
+    head = `${SET.guideSeen ? '' : `<section class="panel newhere"><div><b>New to Savepoint?</b><p class="small mut">A two-minute guide to filing your saves, finding them again, and what every button does.</p></div><div class="row"><a class="btn sm" href="#guide">${ic('help')}Open the guide</a><button class="btn ghost sm" data-act="guide-dismiss">Hide this</button></div></section>`}<div class="head"><div><p class="eyebrow">Library</p><h1>Your saves</h1></div><div class="head-actions"><button class="btn ghost" data-act="flashback">${ic('rewind')}Flashback</button><a class="btn" href="#sort">${ic('bolt')}Sort mode</a></div></div>
+${all ? `<section class="panel inbox"><div><p class="eyebrow">Inbox</p><p class="big num">${fmtN(un)}</p><p class="small mut">unsorted ${un === 1 ? 'save' : 'saves'}</p></div><div class="meter"><div class="mbar" role="img" aria-label="${done}% organized"><i style="width:${done}%"></i></div><p class="small mut num">${done}% organized · ${plural(S.boards.length, 'board')} · ${curStreak() ? `${curStreak()}-day streak` : 'organize today to start a streak'}</p></div>${un ? `<a class="btn" href="#sort">${ic('bolt')}Start sorting</a>` : `<span class="btn ghost" aria-disabled="true">${ic('check')}Inbox zero</span>`}</section>` : ''}`;
   }
   main.innerHTML = `${banner()}${head}
 <div class="toolbar">
@@ -1223,7 +1268,7 @@ function renderStage(anim) {
   ${it.cap ? `<p class="capq"><span class="xs dim">Caption from Instagram</span>${esc(it.cap)}</p>` : ''}
 </section>
 <section class="stage s-pad">
-  <h2 class="lbl">File into</h2>
+  <h2 class="lbl">Tap a board to file this save</h2>
   <div class="boardpad">${S.boards.map((b, i) => `<button class="bpad" style="--c:var(--b${b.color})" data-act="file" data-b="${b.id}"><span class="sw"></span><span class="bn">${esc(b.name)}</span>${i < 9 ? `<kbd>${i + 1}</kbd>` : ''}</button>`).join('')}<button class="bpad add" data-act="sort-newboard">${ic('plus')}<span class="bn">New board</span></button></div>
   ${SORT.newBoard ? `<form class="panel formgrid" id="sortnb"><label class="small mut" for="snb">New board name</label><div class="row"><input id="snb" class="field" style="flex:1 1 180px" maxlength="40" placeholder="e.g. Recipes" required><button class="btn">Create and file</button></div></form>` : ''}
   <div id="batch">${batchHTML()}</div>
@@ -1485,6 +1530,117 @@ function vTrophies() {
 <li><b>+15</b>Create a board</li>
 <li><b>+25</b>Your first organizing of the day, which keeps your streak alive</li>
 <li><b>+50</b>Every achievement</li></ul></section>`;
+}
+
+/* =============== guide =============== */
+function vGuide() {
+  if (!SET.guideSeen) { SET.guideSeen = true; savePrefs(); }
+  const bs = S.boards.length ? S.boards.slice(0, 3) : [{name: 'Recipes', color: 2}, {name: 'Travel', color: 3}, {name: 'Workouts', color: 6}];
+  const btn = (label, icon, ghost) => `<span class="btn sm${ghost ? ' ghost' : ''}">${icon ? ic(icon) : ''}${label}</span>`;
+  const pad = b => `<span class="bpad" style="--c:var(--b${b.color})"><span class="sw"></span><span class="bn">${esc(b.name)}</span></span>`;
+  const chip = (label, on) => `<span class="chip xs"${on ? ' data-on' : ''}>${label}</span>`;
+  const icb = name => `<span class="iconbtn sm">${ic(name)}</span>`;
+  const sample = {id: 'GuideSample01', author: 'midnight.noodle.club', type: 'reel', rating: 0};
+  const def = (term, text) => `<div><dt>${term}</dt><dd>${text}</dd></div>`;
+  const sec = (id, title, items, open) => `<details id="${id}"${open ? ' open' : ''}><summary>${title}</summary><dl class="gdefs">${items.join('')}</dl></details>`;
+  main.innerHTML = `<div class="guide">
+<div class="head"><div><p class="eyebrow">Guide</p><h1>How Savepoint works</h1><p class="mut">Everything you saved on Instagram lands in your <b>Inbox</b> as Unsorted. You file each save into a <b>board</b>, a folder you name, like Recipes or Travel. After that you can find anything by board, search, stars or status. Savepoint never changes anything on Instagram.</p></div></div>
+<div class="gtoc" role="group" aria-label="Jump to">${[['g-start', 'Get started'], ['g-see', 'Seeing your posts'], ['g-add', 'Adding new saves'], ['g-buttons', 'What the buttons mean'], ['g-faq', 'Questions']].map(([t, l]) => `<button class="chip xs" data-act="gjump" data-t="${t}">${l}</button>`).join('')}</div>
+
+<section class="panel gsec" id="g-start"><h2>Get started in 5 steps</h2><ol class="gsteps">
+<li><div><h3>Make a few boards</h3><p>Open the <b>Boards</b> tab and tap <b>New board</b>, or tap one of the <b>Quick add</b> names. Collections you made on Instagram are already there as boards.</p><div class="gshow" aria-hidden="true">${btn('New board', 'plus')}${chip(ic('plus') + 'Travel')}${chip(ic('plus') + 'Workouts')}</div></div></li>
+<li><div><h3>Sort your inbox</h3><p>Open the <b>Sort</b> tab. You see one save at a time. Tap a board to file it there, and the next save appears.</p><div class="gshow" aria-hidden="true">${coverHTML(sample)}${bs.map(pad).join('')}</div></div></li>
+<li><div><h3>Not sure what a save is? Look first</h3><p>Tap <b>Open on Instagram</b>. Instagram opens on that exact post. Come back here and tap a board. <b>Skip</b> moves on and shows it to you again later.</p><div class="gshow" aria-hidden="true">${btn('Open on Instagram', 'ext', true)}${btn('Skip', 'skip', true)}</div></div></li>
+<li><div><h3>Let the shortcuts do the work</h3><p>When a creator has more unsorted saves, Savepoint offers to file them all. <b>File 12</b> puts every save from that creator into the same board. <b>Always for @creator</b> also makes a rule, so their future saves file themselves.</p><div class="gshow" aria-hidden="true">${btn('File 12')}${btn('Always for @creator', '', true)}</div></div></li>
+<li><div><h3>Use your library</h3><p>Open the <b>Library</b> tab to browse. Pick a board from <b>All boards</b>, search for a creator or a word, or tap a filter like <b>To try</b>. Tap any card to rate it, name it or mark it done.</p><div class="gshow" aria-hidden="true">${chip('All', true)}${chip('Unsorted')}${chip('To try')}${chip('Done')}</div></div></li>
+</ol></section>
+
+<section class="panel gsec" id="g-see"><h2>Seeing your posts</h2>
+<div class="gshow" aria-hidden="true">${coverHTML(sample)}</div>
+<ul class="feat"><li>Instagram’s download has links, not pictures. So each save shows a colored card with the creator’s initials, and whether it’s a Reel or a Post.</li>
+<li>To see the real post, tap the card, then <b>Open on Instagram</b>.</li>
+<li>If your download included captions, they show on the card in italics and in Sort mode.</li>
+<li>Type a name in <b>What is it?</b> (or <b>Name it</b> in Sort mode), like “miso pasta”. It shows on the card and search finds it.</li></ul></section>
+
+<section class="panel gsec" id="g-add"><h2>Adding new saves</h2>
+<ul class="feat"><li><b>Keep saving on Instagram</b> with the bookmark icon, as usual. Savepoint only sees new saves once you add them here.</li>
+<li><b>One at a time:</b> on the post in Instagram, tap the share arrow, then <b>Copy link</b>. In Savepoint, tap the download arrow at the top right, paste it into <b>Add links by hand</b>, and tap <b>Add links</b>. It appears in Unsorted.</li>
+<li><b>Lots at once:</b> every month or two, request a new Instagram download and import it the same way as the first time. New saves are added, and everything you already organized stays as it is.</li></ul></section>
+
+<section class="gsec gref" id="g-buttons"><h2>What the buttons mean</h2><p class="small mut">Tap a screen to see its buttons.</p>
+${sec('g-top', 'Top bar and tabs', [
+  def(icb('layers').replace(ic('layers'), '<svg class="i" viewBox="0 0 34 34" aria-hidden="true"><path d="M11 7.5h12v19l-6-4.4-6 4.4z" style="fill:none;stroke:var(--a1);stroke-width:2.6;stroke-linejoin:round"/></svg>') + 'Logo', 'Back to your Library.'),
+  def(`<span class="lvb num">Lv 3</span><span class="streak">${ic('flame')}2</span>`, 'Your level, and how many days in a row you’ve organized. Tap it for Trophies.'),
+  def(icb('help') + 'Question mark', 'This guide.'),
+  def(icb('palette') + 'Palette', 'Change the look, and turn sound effects on or off.'),
+  def(icb('download') + 'Download arrow', 'Import &amp; data: add your Instagram file, paste links, back up or erase.'),
+  def('Bottom tabs', 'Library, Sort, Boards, People, Stats and Trophies.'),
+], true)}
+${sec('g-lib', 'Library', [
+  def('Inbox card', 'How many saves still need a board. <b>Start sorting</b> opens Sort mode.'),
+  def(btn('Flashback', 'rewind', true), 'Opens a random save from more than a year ago.'),
+  def('Search box', 'Finds creators, your notes and tags, captions and board names.'),
+  def('All boards', 'Show one board only, or Unsorted only.'),
+  def('Newest saved', 'Change the order: oldest first, by creator, top rated or recently filed.'),
+  def(`<span class="seg"><span class="segb" data-on>Grid</span><span class="segb">List</span></span>`, 'Big cards or a compact list.'),
+  def(btn('Select', '', true), 'Tick several saves, then <b>Move to board</b>, <b>Mark done</b> or <b>Let go</b> for all of them at once. <b>Select all shown</b> ticks everything in view.'),
+  def(chip('Unsorted') + chip('4+ stars'), 'Filters: All, Unsorted, Reels, Posts, 4+ stars, To try (want to try or in progress), Done, and Let go.'),
+  def('A card', 'Tap it to open the details panel.'),
+])}
+${sec('g-detail', 'Details panel (after you tap a card)', [
+  def(icb('left') + icb('right'), 'Previous and next save in the list you came from.'),
+  def(icb('x'), 'Close the panel.'),
+  def('@creator', 'Opens their profile in Instagram.'),
+  def(btn('Open on Instagram', 'ext'), 'Opens the post itself.'),
+  def(chip(bs[0].name, true), 'Board: tap a board to move the save there. <b>Unsorted</b> takes it out of every board.'),
+  def('What is it?', 'Your own note, like “20-minute noodles”. Search uses it.'),
+  def(`<span class="stars"><span class="star" data-on>${ic('star')}</span><span class="star">${ic('star')}</span></span>`, 'Rate from 1 to 5. Tap the same star again to clear it.'),
+  def('Status', 'None, Want to try, In progress or Done. Handy for recipes, places and workouts.'),
+  def('Tags', 'Type a word and press Enter (or Go), like dinner or gift. Tap the × on a tag to remove it.'),
+  def(btn('Let go', 'box', true), 'Hides a save you don’t want any more. It does <b>not</b> unsave it on Instagram. It moves to the <b>Let go</b> filter, where <b>Bring back</b> restores it.'),
+])}
+${sec('g-sort', 'Sort mode', [
+  def(`<span class="seg"><span class="segb" data-on>Zen</span><span class="segb">60s sprint</span></span>`, 'Zen has no timer. Sprint gives you one minute to file as many saves as you can, for a high score.'),
+  def('By creator', 'The order saves come in. By creator keeps each creator’s saves together, which makes File all work best. You can also pick newest, oldest or shuffle.'),
+  def('Left and the bar', 'How many saves are still unsorted, and how much you’ve organized.'),
+  def(`<span class="combo hot">Combo x3</span>`, 'File saves within six seconds of each other to build a combo. Every 3 in a row raises your XP multiplier, up to 5x.'),
+  def(pad(bs[0]), 'Tap a board to file the save. <b>New board</b> makes one without leaving Sort mode.'),
+  def(btn('File 12') + btn('Always for @creator', '', true), 'File every unsorted save from this creator into the same board. The second button also makes a rule for their future saves.'),
+  def(btn('Skip', 'skip', true), 'Move on. The save comes back later.'),
+  def(btn('Let go', 'box', true), 'Hide it. Instagram isn’t touched.'),
+  def(btn('Undo', 'undo', true), 'Take back your last move.'),
+  def('Name it', 'An optional note for this save, worth 5 extra XP.'),
+  def('Keyboard', 'On a computer: 1 to 9 file into a board, S skips, L lets go, Z undoes, O opens on Instagram.'),
+])}
+${sec('g-boards', 'Boards', [
+  def(btn('New board', 'plus'), 'Pick a name and a color.'),
+  def(chip(ic('plus') + 'Travel'), 'Quick add: one tap makes a board with that name.'),
+  def('A board tile', 'Tap it to see that board’s saves. “From Instagram” means it came from one of your Instagram collections.'),
+  def(btn('Edit board', 'edit', true), 'Rename it, change its color, or delete it. Deleting moves its saves back to Unsorted, so nothing is lost.'),
+  def('Autopilot rules', 'Creator → board. Saves from that creator file themselves when you import or paste links. The × deletes a rule.'),
+])}
+${sec('g-people', 'People', [
+  def('Needs', 'Followers and following in your Instagram download.'),
+  def('The tiles', '<b>Don’t follow back</b>: you follow them, they don’t follow you. <b>You don’t follow</b>: they follow you, you don’t follow them. <b>Mutuals</b>. <b>Saved, not followed</b>: creators you save a lot but don’t follow. <b>Following</b>. <b>Unfollowed</b>. Tap a tile to list those accounts.'),
+  def(chip('Friend') + chip('Creator'), 'Labels for your own sorting: Friend, Creator, Brand, Inspo. Filter the list by them.'),
+  def('Reviewed', 'Tick accounts as you decide on them. To unfollow someone, tap their name to open Instagram and unfollow there.'),
+])}
+${sec('g-more', 'Stats, Trophies, and Import &amp; data', [
+  def('Stats', 'Your saving habits: saves per month (tap a bar for the count), top creators, boards, reels versus posts, fun facts, and saves from this day in earlier years.'),
+  def('Trophies', 'Your level, streak, best sprint and achievements, plus how to earn XP.'),
+  def('Import &amp; data', '<b>Add your file</b> (Instagram download), <b>Add links by hand</b>, <b>Download backup</b>, <b>Download spreadsheet</b>, <b>Restore a backup</b>, and <b>Erase my data</b>.'),
+])}
+</section>
+
+<section class="panel gsec gfaq" id="g-faq"><h2>Questions</h2>
+<div><h3>Does Savepoint change anything on Instagram?</h3><p>No. It only reads the download you gave it. Nothing here unsaves, unfollows or posts anything.</p></div>
+<div><h3>Do I need to press save?</h3><p>No. Every change is saved on its own${Store.kind === 'db' ? ' to your Claude account. Only you can see it, on any device where you’re signed in' : Store.kind === 'local' ? ' in this browser' : ''}.</p></div>
+<div><h3>Why do some saves say “Unknown creator”?</h3><p>Links you paste by hand usually don’t say who posted them. Saves from the Instagram download do.</p></div>
+<div><h3>What happens if I import again?</h3><p>New saves are added. Boards, notes, ratings and statuses you already set stay as they are.</p></div>
+<div><h3>What are XP and levels for?</h3><p>Fun. They track how much you’ve organized and unlock achievements. You can ignore them.</p></div>
+</section>
+<div class="row"><a class="btn" href="#sort">${ic('bolt')}Start sorting</a><a class="btn ghost" href="#library">Back to my saves</a></div>
+</div>`;
 }
 
 /* =============== import & data =============== */
@@ -1780,6 +1936,8 @@ const ACT = {
   pmore: () => { UI.pshown += 100; vPeople(); },
   'imp-go': () => mergeImport(), 'imp-cancel': () => { UI.imp = null; refreshImp(); },
   'links-add': () => addLinks(),
+  'guide-dismiss': () => { SET.guideSeen = true; savePrefs(); vLibrary(); },
+  gjump: el => { const t = document.getElementById(el.dataset.t); if (t) { if (t.tagName === 'DETAILS') t.open = true; t.scrollIntoView({block: 'start', behavior: reduced() ? 'auto' : 'smooth'}); } },
   'copy-link': async () => {
     try { await navigator.clipboard.writeText(PAGE_URL); toast('Link copied. Paste it into Chrome.'); }
     catch (e) { const el = $('#pagelink'); if (el) { const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } toast('Couldn’t copy here. The link is selected: long-press it and choose Copy.'); }
