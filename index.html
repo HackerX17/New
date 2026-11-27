@@ -103,6 +103,11 @@ main{display:grid;gap:16px;padding-block:14px 8px}
 .frow .dot{width:14px;height:14px;border-radius:4px;background:var(--c);flex:none}
 .frow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .frow .ct{color:var(--dim);font-weight:500;font-size:15px}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--ink);background:color-mix(in srgb,var(--c,var(--a1)) 22%,var(--panel2));border:1px solid color-mix(in srgb,var(--c,var(--a1)) 45%,transparent);white-space:nowrap}
+.summary{display:grid;gap:10px;padding:14px;border-radius:var(--r);background:var(--panel);border:1px solid color-mix(in srgb,var(--a1) 45%,var(--line))}
+.summary .tags{display:flex;flex-wrap:wrap;gap:6px}
+.summary .btn{justify-self:start}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .sep{margin-top:8px}
 .back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:15px;min-height:40px}
 .head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
@@ -144,7 +149,7 @@ details.how summary{cursor:pointer;color:var(--a1);min-height:44px;display:flex;
   <a class="logo" href="#sort"><svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="10" style="fill:var(--panel2)"/><path d="M11 7.5h12v19l-6-4.4-6 4.4z" style="fill:none;stroke:var(--a1);stroke-width:2.6;stroke-linejoin:round"/></svg><span>Savepoint</span></a>
   <span class="left" id="left" aria-live="polite"></span>
   <span class="spacer"></span>
-  <nav class="tabs" id="tabs" aria-label="Main"><a href="#sort" id="tab-sort">Sort</a><a href="#folders" id="tab-folders">Folders</a></nav>
+  <nav class="tabs" id="tabs" aria-label="Main"><a href="#sort" id="tab-sort">Sort</a><a href="#collections" id="tab-folders">Collections</a></nav>
   <button class="menubtn" id="menubtn" data-act="menu" aria-label="Menu: add saves, backup, settings"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
 </div></header>
 <main id="main" class="wrap"></main>
@@ -229,13 +234,25 @@ function postEntries(e) {
   walk(e, e);
   return res;
 }
+// A collections file lists each collection as a header entry followed by its posts. A header is marked as one:
+// titled "Collection", dated with Creation/Update Time, labelled "Collection name", or linking to a Saved collection.
+// Anything else without a post link (a deleted or private post) is skipped and never becomes a collection.
+function isCollectionHeader(e) {
+  if (!e || typeof e !== 'object') return false;
+  if (typeof e.title === 'string' && /^collections?$/i.test(e.title.trim())) return true;
+  const sc = scan(e);
+  const keys = Object.keys(e.string_map_data || {}).join('|') + '|' + Object.keys(sc.labels).join('|');
+  if (/added time|saved on/i.test(keys)) return false;
+  if (/creation time|update time|collection name/i.test(keys)) return true;
+  return sc.urls.some(u => /instagram\.com\/(?:[A-Za-z0-9._]+\/)?saved\//i.test(u) || /instagram\.com\/collections?\//i.test(u));
+}
 function headerName(e) {
   if (!e || typeof e !== 'object') return '';
   const smd = e.string_map_data;
-  if (smd) { const nm = smd.Name || smd.name || smd['Collection name']; if (nm && typeof nm.value === 'string' && !nm.href) return fixText(nm.value).trim(); }
-  if (typeof e.title === 'string' && e.title.trim() && !/^collections?$/i.test(e.title.trim())) return fixText(e.title).trim();
+  if (smd) { const nm = smd.Name || smd.name || smd['Collection name'] || smd['Collection Name']; if (nm && typeof nm.value === 'string' && nm.value.trim()) return fixText(nm.value).trim(); }
   const sc = scan(e);
-  for (const k of ['collection name', 'collection', 'name']) if (typeof sc.labels[k] === 'string') return fixText(sc.labels[k]).trim();
+  for (const k of ['collection name', 'name', 'collection']) if (typeof sc.labels[k] === 'string' && sc.labels[k].trim()) return fixText(sc.labels[k]).trim();
+  if (typeof e.title === 'string' && e.title.trim() && !/^collections?$/i.test(e.title.trim())) return fixText(e.title).trim();
   return '';
 }
 function colItem(e, url, col, skipTitle = true) {
@@ -250,8 +267,8 @@ function parseCollections(j) {
   const out = []; let cur = '';
   for (const e of entriesOf(j)) {
     const posts = postEntries(e);
-    if (!posts.length) { const h = headerName(e); if (h) cur = h; continue; }
-    if (posts.length === 1) out.push(colItem(e, posts[0].url, cur));
+    if (!posts.length) { if (isCollectionHeader(e)) { const h = headerName(e); if (h) cur = h; } continue; }
+    if (posts.length === 1 && !isCollectionHeader(e)) out.push(colItem(e, posts[0].url, cur));
     else { const h = headerName(e) || cur; for (const p of posts) out.push(colItem(p.entry === e ? {} : p.entry, p.url, h, false)); }
   }
   return out.filter(x => x && x.col);
@@ -301,7 +318,7 @@ function sniff(j) {
 }
 function newImport() { return {saved: [], cols: [], liked: [], followers: null, following: null, unfollowed: null, close: null, html: 0, files: 0}; }
 function addParsed(res, kind, j) {
-  res.files++;
+  res.files++; res.kinds = res.kinds || {}; res.kinds[kind] = (res.kinds[kind] || 0) + 1;
   if (kind === 'saved') res.saved.push(...parseSaved(j));
   else if (kind === 'cols') res.cols.push(...parseCollections(j));
   else if (kind === 'liked') res.liked.push(...parseLiked(j));
@@ -407,11 +424,15 @@ const folderById = id => D.folders.find(f => f.id === id) || null;
 const isUnsorted = it => it && !it.f && !it.x;
 const unsortedIds = () => [...D.items].filter(([, it]) => isUnsorted(it)).map(([id]) => id);
 const countIn = fid => { let n = 0; for (const it of D.items.values()) if (it.f === fid && !it.x) n++; return n; };
-function addFolder(name) {
-  name = String(name || '').trim().slice(0, 40); if (!name) return null;
-  const ex = D.folders.find(f => f.name.toLowerCase() === name.toLowerCase()); if (ex) return ex;
-  const f = {id: 'f' + rid(), name, c: (D.folders.length % 8) + 1}; D.folders.push(f); save(); return f;
+// A collection is {id, name, c: color, ig: true when it came from Instagram, false when made here}.
+function addFolder(name, ig) {
+  name = String(name || '').trim().slice(0, 60); if (!name) return null;
+  const ex = D.folders.find(f => f.name.toLowerCase() === name.toLowerCase()); if (ex) { if (ig) ex.ig = true; return ex; }
+  const f = {id: 'f' + rid(), name, c: (D.folders.length % 8) + 1, ig: !!ig}; D.folders.push(f); save(); return f;
 }
+// Placed by an import (it was in that collection on Instagram), as opposed to sorted by you here.
+const importPlaced = it => it.by === 'ig' || (!!it.at && it.at === it.s);
+const onInstagram = (it, f) => !!f && (it.c || []).includes(f.name);
 const postPath = (id, it) => `www.instagram.com/${it.t === 'r' ? 'reel' : 'p'}/${id}/`;
 const embedSrc = (id, it) => `https://${postPath(id, it)}embed/captioned/`;
 const appLink = path => ANDROID ? `intent://${path}#Intent;scheme=https;package=com.instagram.android;S.browser_fallback_url=${encodeURIComponent('https://' + path)};end` : 'https://' + path;
@@ -448,7 +469,7 @@ function nextAfter() { for (let i = 1; i < Q.length; i++) if (isUnsorted(D.items
 function fileTo(fid, btn) {
   const id = cur(); const f = folderById(fid); if (!id || !f) return;
   const it = D.items.get(id); UNDO.push({id, f: it.f, x: it.x, at: it.at}); if (UNDO.length > 100) UNDO.shift();
-  it.f = fid; it.at = nowS(); Q.shift(); save();
+  it.f = fid; it.at = nowS(); delete it.by; Q.shift(); save();
   const more = it.a ? unsortedIds().filter(x => D.items.get(x).a === it.a).length : 0;
   batch = more ? {a: it.a, fid} : null;
   if (btn) { btn.classList.remove('flash'); void btn.offsetWidth; btn.classList.add('flash'); }
@@ -460,7 +481,7 @@ function undo() { const u = UNDO.pop(); if (!u) return; const it = D.items.get(u
 function batchFile() {
   if (!batch) return; const f = folderById(batch.fid); if (!f) return;
   const ids = unsortedIds().filter(x => D.items.get(x).a === batch.a);
-  for (const x of ids) { const it = D.items.get(x); it.f = batch.fid; it.at = nowS(); }
+  for (const x of ids) { const it = D.items.get(x); it.f = batch.fid; it.at = nowS(); delete it.by; }
   toast(`Put ${plural(ids.length, 'more post')} from @${batch.a} in ${f.name}`); batch = null; save(); render();
 }
 
@@ -469,7 +490,7 @@ const main = $('#main');
 let view = '', newFolderOpen = false, openRow = null, shown = 50;
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  const v = !D.items.size ? 'start' : h === 'folders' ? 'folders' : h.startsWith('f-') ? 'folder' : 'sort';
+  const v = !D.items.size ? 'start' : (h === 'collections' || h === 'folders') ? 'folders' : h.startsWith('f-') ? 'folder' : 'sort';
   if (v !== view || v === 'folder') { openRow = null; shown = 50; }
   view = v; render(true);
 }
@@ -478,7 +499,7 @@ addEventListener('hashchange', route);
 function go(h) { if (location.hash.replace(/^#/, '') === h) route(); else location.hash = h; }
 function render(scrollTop) {
   const un = unsortedIds().length;
-  $('#left').innerHTML = D.items.size ? `<b>${fmtN(un)}</b> left` : '';
+  $('#left').innerHTML = D.items.size ? `<b>${fmtN(un)}</b> to sort` : '';
   $('#tabs').hidden = !D.items.size;
   $('#tab-sort').toggleAttribute('aria-current', view === 'sort'); if (view === 'sort') $('#tab-sort').setAttribute('aria-current', 'page');
   $('#tab-folders').toggleAttribute('aria-current', view === 'folders' || view === 'folder'); if (view === 'folders' || view === 'folder') $('#tab-folders').setAttribute('aria-current', 'page');
@@ -490,14 +511,14 @@ function vStart() {
   $('#dock').hidden = true;
   main.innerHTML = `<section class="hero">
 <h1>Sort your Instagram saves</h1>
-<p class="mut">See each saved post, tap a folder, and the next one appears. Nothing changes on Instagram.</p>
+<p class="mut">Your Instagram collections come in as they are. Then you see each save that isn’t in a collection yet, tap the collection it belongs in, and the next one appears.</p>
 <label class="btn wide">${ic('upload')}Choose your Instagram ZIP<input type="file" id="pick" multiple aria-label="Choose your Instagram download"></label>
 <div id="status"></div>
 <details class="how"><summary>How to get your Instagram download</summary><ol class="steps">
 <li>In Instagram, open your profile, tap the three lines, then <b>Meta Account</b> (older versions: Accounts Center).</li>
 <li><b>Your information and permissions</b>, then <b>Export your information</b>, then <b>Create export</b>.</li>
 <li>Pick your profile, then <b>Export to device</b>.</li>
-<li><b>Customize information</b>: clear everything, then tick only <b>Saved</b>.</li>
+<li><b>Customize information</b>: clear everything, then tick only <b>Saved</b> (that includes your collections).</li>
 <li><b>Date range</b>: All time. <b>Format</b>: JSON. Then <b>Start export</b>.</li>
 <li>When Instagram says it’s ready, go back to <b>Export your information</b>, tap <b>Download</b>, then choose that ZIP above.</li></ol></details>
 <p class="xs dim">Your saves stay in this browser on this phone. Download a backup from the menu now and then.</p>
@@ -508,13 +529,14 @@ function vSort(scrollTop) {
   const id = cur();
   if (!id) {
     $('#dock').hidden = true;
-    main.innerHTML = `<section class="hero"><h1>All sorted</h1><p class="mut">Every save is in a folder or in Don’t need.</p><div class="row"><a class="btn" href="#folders">See your folders</a><button class="btn ghost" data-act="menu">Add more saves</button></div></section>`;
+    main.innerHTML = `<section class="hero"><h1>All sorted</h1><p class="mut">Every save is in a collection or in Don’t need.</p><div class="row"><a class="btn" href="#collections">See your collections</a><button class="btn ghost" data-act="menu">Add more saves</button></div></section>`;
     return;
   }
   const it = D.items.get(id), nx = nextAfter();
-  if (!$('#post', main)) main.innerHTML = `<section class="post" id="post" style="display:grid;gap:10px"><div class="who" id="who"></div><div class="frame" id="frame"><div class="wait"><div class="spin"></div><span>Loading the post from Instagram…</span></div></div><p class="hint" id="hint"></p></section>`;
+  if (!$('#post', main)) main.innerHTML = `<div id="summary"></div><section class="post" id="post" style="display:grid;gap:10px"><p class="eyebrow">Not in a collection yet</p><div class="who" id="who"></div><div class="frame" id="frame"><div class="wait"><div class="spin"></div><span>Loading the post from Instagram…</span></div></div><p class="hint" id="hint"></p></section>`;
   $('#who').innerHTML = `${it.a ? `<a href="${esc(appLink('www.instagram.com/' + encodeURIComponent(it.a) + '/'))}">@${esc(it.a)}</a>` : '<span style="font-weight:600">Unknown creator</span>'}<span class="dim small">${it.t === 'r' ? 'Reel' : 'Post'}${it.s ? ' · saved ' + fmtD(it.s) : ''}</span>`;
   $('#hint').innerHTML = `Blank, or says the post is unavailable? It’s private or deleted. Tap <b>Instagram</b> below to try the app, or <b>Don’t need</b>.${it.n ? `<br><span class="note" style="display:inline-block;margin-top:8px">Your note: ${esc(it.n)}</span>` : ''}`;
+  $('#summary').innerHTML = summaryHTML();
   const frame = $('#frame');
   for (const fr of $$('iframe', frame)) if (fr.dataset.id !== id && fr.dataset.id !== nx) fr.remove();
   let fc = $(`iframe[data-id="${CSS.escape(id)}"]`, frame); if (!fc) { fc = makeFrame(id, it); frame.appendChild(fc); }
@@ -527,9 +549,9 @@ function renderDock(id, it) {
   const d = $('#dockin'); $('#dock').hidden = false;
   const bf = batch && folderById(batch.fid), bn = batch ? unsortedIds().filter(x => D.items.get(x).a === batch.a).length : 0;
   d.innerHTML = `${bf && bn ? `<div class="batch"><p>${plural(bn, 'more post')} from @${esc(batch.a)}. Put ${bn === 1 ? 'it' : 'them all'} in ${esc(bf.name)} too?</p><button class="btn sm" data-act="batch">Yes, put ${bn === 1 ? 'it' : 'all'} in ${esc(bf.name)}</button></div>` : ''}
-<p class="dock-label">Put it in a folder</p>
+<p class="dock-label">Put it in a collection</p>
 <div class="folders">${D.folders.map(f => `<button class="fbtn" style="--c:var(--b${f.c})" data-act="file" data-f="${f.id}"><span class="dot"></span><span class="nm">${esc(f.name)}</span><span class="ct">${countIn(f.id)}</span></button>`).join('')}
-${newFolderOpen ? `<form class="newf" id="newf" style="grid-column:1/-1"><label class="sr" for="nf">New folder name</label><input id="nf" class="field" maxlength="40" placeholder="New folder name" autocomplete="off" required><button class="btn sm">Add and put it there</button></form>` : `<button class="fbtn add" data-act="newfolder">${ic('plus')}<span class="nm">New folder</span></button>`}</div>
+${newFolderOpen ? `<form class="newf" id="newf" style="grid-column:1/-1"><label class="sr" for="nf">New collection name</label><input id="nf" class="field" maxlength="60" placeholder="New collection name" autocomplete="off" required><button class="btn sm">Add and put it there</button></form>` : `<button class="fbtn add" data-act="newfolder">${ic('plus')}<span class="nm">New collection</span></button>`}</div>
 <div class="actions"><button class="act" data-act="skip">${ic('skip')}Skip</button><button class="act" data-act="dontneed">${ic('trash')}Don’t need</button><button class="act" data-act="undo" ${UNDO.length ? '' : 'disabled'}>${ic('undo')}Undo</button><a class="act ig" href="${esc(appLink(postPath(id, it)))}">${ic('ig')}Instagram</a></div>`;
   if (newFolderOpen) setTimeout(() => { const i = $('#nf'); if (i) i.focus(); }, 20);
   sizeDock();
@@ -540,33 +562,36 @@ addEventListener('resize', sizeDock);
 function vFolders() {
   $('#dock').hidden = true; sizeDock();
   const un = unsortedIds().length, dn = [...D.items.values()].filter(i => i.x).length;
-  main.innerHTML = `<div class="head"><h1>Folders</h1><button class="btn sm ghost" data-act="newfolder2">${ic('plus')}New folder</button></div>
-${newFolderOpen ? `<form class="newf" id="newf2"><label class="sr" for="nf2">New folder name</label><input id="nf2" class="field" maxlength="40" placeholder="New folder name" autocomplete="off" required><button class="btn sm">Add</button></form>` : ''}
-<ul class="list">${D.folders.map(f => `<li><a class="frow" href="#f-${f.id}" style="--c:var(--b${f.c})"><span class="dot"></span><span class="nm">${esc(f.name)}</span><span class="ct">${fmtN(countIn(f.id))}</span></a></li>`).join('') || '<li class="dim">No folders yet. Make one here or while sorting.</li>'}</ul>
-<ul class="list sep"><li><a class="frow" href="#f-unsorted" style="--c:var(--dim)"><span class="dot"></span><span class="nm">Not sorted yet</span><span class="ct">${fmtN(un)}</span></a></li><li><a class="frow" href="#f-dontneed" style="--c:var(--bad)"><span class="dot"></span><span class="nm">Don’t need</span><span class="ct">${fmtN(dn)}</span></a></li></ul>`;
+  const mine = D.folders.filter(f => !f.ig);
+  main.innerHTML = `<div class="head"><h1>Your collections</h1><button class="btn sm ghost" data-act="newfolder2">${ic('plus')}New collection</button></div>
+${newFolderOpen ? `<form class="newf" id="newf2"><label class="sr" for="nf2">New collection name</label><input id="nf2" class="field" maxlength="60" placeholder="New collection name" autocomplete="off" required><button class="btn sm">Add</button></form>` : ''}
+<ul class="list">${D.folders.map(f => `<li><a class="frow" href="#f-${f.id}" style="--c:var(--b${f.c})"><span class="dot"></span><span class="nm">${esc(f.name)}</span>${f.ig ? '' : '<span class="tag">New</span>'}<span class="ct">${fmtN(countIn(f.id))}</span></a></li>`).join('') || '<li class="dim">No collections came in from Instagram. Make one here or while sorting.</li>'}</ul>
+${mine.length ? '<p class="xs dim">“New” collections exist only here. To have one on Instagram too, open a post in Instagram, tap the bookmark, and make a collection with the same name.</p>' : ''}
+<ul class="list sep"><li><a class="frow" href="#f-unsorted" style="--c:var(--dim)"><span class="dot"></span><span class="nm">Not in a collection</span><span class="ct">${fmtN(un)}</span></a></li><li><a class="frow" href="#f-dontneed" style="--c:var(--bad)"><span class="dot"></span><span class="nm">Don’t need</span><span class="ct">${fmtN(dn)}</span></a></li></ul>`;
   if (newFolderOpen) setTimeout(() => { const i = $('#nf2'); if (i) i.focus(); }, 20);
 }
 let folderEdit = false, folderDel = false;
 function vFolder() {
   $('#dock').hidden = true; sizeDock();
   const key = decodeURIComponent(location.hash.slice(3));
-  const f = folderById(key), special = key === 'unsorted' ? 'Not sorted yet' : key === 'dontneed' ? 'Don’t need' : '';
-  if (!f && !special) { location.hash = 'folders'; return; }
+  const f = folderById(key), special = key === 'unsorted' ? 'Not in a collection' : key === 'dontneed' ? 'Don’t need' : '';
+  if (!f && !special) { location.hash = 'collections'; return; }
   const ids = [...D.items].filter(([, it]) => key === 'unsorted' ? isUnsorted(it) : key === 'dontneed' ? it.x : (it.f === key && !it.x)).sort((a, b) => (b[1].at || b[1].s || 0) - (a[1].at || a[1].s || 0)).map(([id]) => id);
   const name = f ? f.name : special;
-  main.innerHTML = `<a class="back" href="#folders">${ic('left')}Folders</a>
-${f && folderEdit ? `<form class="newf" id="renamef"><label class="sr" for="rn">Folder name</label><input id="rn" class="field" maxlength="40" value="${esc(f.name)}" required><button class="btn sm">Save</button></form>
-<div class="row">${folderDel ? `<span class="small">Delete “${esc(f.name)}”? Its posts go back to Not sorted yet.</span><button class="btn sm danger" data-act="delf-yes">Delete</button><button class="btn sm ghost" data-act="delf-no">Keep</button>` : `<button class="btn sm ghost" data-act="delf">Delete folder</button><button class="btn sm ghost" data-act="editf-cancel">Cancel</button>`}</div>`
+  main.innerHTML = `<a class="back" href="#collections">${ic('left')}Collections</a>
+${f && folderEdit ? `<form class="newf" id="renamef"><label class="sr" for="rn">Collection name</label><input id="rn" class="field" maxlength="60" value="${esc(f.name)}" required><button class="btn sm">Save</button></form>
+<div class="row">${folderDel ? `<span class="small">Remove “${esc(f.name)}” from Savepoint? Its posts go back to Not in a collection. Instagram isn’t changed.</span><button class="btn sm danger" data-act="delf-yes">Remove</button><button class="btn sm ghost" data-act="delf-no">Keep</button>` : `<button class="btn sm ghost" data-act="delf">Remove collection</button><button class="btn sm ghost" data-act="editf-cancel">Cancel</button>`}</div>`
   : `<div class="head"><h1>${esc(name)}</h1>${f ? `<button class="btn sm ghost" data-act="editf">Rename or delete</button>` : ''}</div>`}
-<p class="small mut">${plural(ids.length, 'post')}. Tap one to see it.</p>
+<p class="small mut">${plural(ids.length, 'post')}. Tap one to see it.${f && !f.ig ? ' This collection was made here, so it isn’t on Instagram yet.' : f ? ' “Added here” means you sorted it into this collection in Savepoint; it isn’t in the collection on Instagram yet.' : ''}</p>
 <ul class="list" id="plist">${ids.slice(0, shown).map(id => prowHTML(id)).join('') || '<li class="dim">Nothing here yet.</li>'}</ul>
 ${ids.length > shown ? `<button class="btn ghost wide" data-act="more">Show more</button>` : ''}`;
   if (openRow) { const r = $(`.prow[data-id="${CSS.escape(openRow)}"]`); if (r) openPreview(r); }
 }
 function prowHTML(id) {
-  const it = D.items.get(id); const isOpen = openRow === id;
-  return `<li class="prow" data-id="${esc(id)}" ${isOpen ? 'open' : ''}><button data-act="row" aria-expanded="${isOpen}"><span class="c1">@${esc(it.a || 'unknown')}</span><span class="c2">${it.t === 'r' ? 'Reel' : 'Post'}${it.s ? ' · saved ' + fmtD(it.s) : ''}</span>${it.n || it.cp ? `<span class="c3">${esc(it.n || it.cp)}</span>` : ''}<span class="chev">${ic('down')}</span></button>${isOpen ? `<div class="pbody"><div class="frame"><div class="wait"><div class="spin"></div><span>Loading…</span></div></div>
-<div class="pacts"><label class="sr" for="mv-${esc(id)}">Move to folder</label><select class="field" id="mv-${esc(id)}" data-move="${esc(id)}"><option value="">Move to…</option>${D.folders.filter(f => f.id !== it.f).map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('')}${it.f || it.x ? '<option value="_none">Not sorted yet</option>' : ''}</select>
+  const it = D.items.get(id); const isOpen = openRow === id; const f = folderById(it.f);
+  const here = f && !it.x && !onInstagram(it, f);
+  return `<li class="prow" data-id="${esc(id)}" ${isOpen ? 'open' : ''}><button data-act="row" aria-expanded="${isOpen}"><span class="c1">@${esc(it.a || 'unknown')}</span><span class="c2">${it.t === 'r' ? 'Reel' : 'Post'}${it.s ? ' · saved ' + fmtD(it.s) : ''}${here ? ' · <span class="tag">Added here</span>' : ''}</span>${it.n || it.cp ? `<span class="c3">${esc(it.n || it.cp)}</span>` : ''}<span class="chev">${ic('down')}</span></button>${isOpen ? `<div class="pbody"><div class="frame"><div class="wait"><div class="spin"></div><span>Loading…</span></div></div>
+<div class="pacts"><label class="sr" for="mv-${esc(id)}">Move to a collection</label><select class="field" id="mv-${esc(id)}" data-move="${esc(id)}"><option value="">Move to…</option>${D.folders.filter(x => x.id !== it.f).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}${it.f || it.x ? '<option value="_none">Not in a collection</option>' : ''}</select>
 ${it.x ? `<button class="btn sm ghost" data-act="restore" data-id="${esc(id)}">Bring back</button>` : `<button class="btn sm ghost" data-act="rowdont" data-id="${esc(id)}">Don’t need</button>`}<a class="btn sm ghost" href="${esc(appLink(postPath(id, it)))}">Open in Instagram</a></div></div>` : ''}</li>`;
 }
 function openPreview(row) {
@@ -583,10 +608,10 @@ function renderMenu() {
 <div class="head"><h2 id="menuh">Menu</h2><button class="btn sm ghost" id="closemenu" data-act="closemenu">Close</button></div>
 <section><h3>Add more saves</h3><label class="btn ghost wide">${ic('upload')}Choose an Instagram ZIP or a backup<input type="file" id="pick2" multiple aria-label="Choose an Instagram download or a Savepoint backup"></label><div id="status2">${menuStatus}</div>
 <label class="small mut" for="links">Or paste post links (in Instagram: Share, then Copy link)</label><textarea id="links" class="field" rows="3" placeholder="https://www.instagram.com/reel/…"></textarea><button class="btn ghost" data-act="addlinks">Add links</button></section>
-<section><h3>Order to sort in</h3><div class="seg" role="group" aria-label="Order">${[['new', 'Newest first'], ['old', 'Oldest first'], ['creator', 'By creator']].map(([k, l]) => `<button data-act="order" data-v="${k}" aria-pressed="${D.order === k}">${l}</button>`).join('')}</div><p class="xs dim">By creator shows each creator’s posts together, so you can put them all in one folder at once.</p></section>
+<section><h3>Order to sort in</h3><div class="seg" role="group" aria-label="Order">${[['new', 'Newest first'], ['old', 'Oldest first'], ['creator', 'By creator']].map(([k, l]) => `<button data-act="order" data-v="${k}" aria-pressed="${D.order === k}">${l}</button>`).join('')}</div><p class="xs dim">By creator shows each creator’s posts together, so you can put them all in one collection at once.</p></section>
 <section><h3>Backup</h3><p class="small mut">Your saves live in this browser on this phone. Keep a copy, or move it to another device.</p><div class="row"><button class="btn ghost sm" data-act="backup" ${D.items.size ? '' : 'disabled'}>Download backup</button></div></section>
-<section><h3>Start over</h3>${eraseAsk ? `<div class="row"><span class="small">Erase all saves and folders from this browser?</span><button class="btn sm danger" data-act="erase-yes">Erase</button><button class="btn sm ghost" data-act="erase-no">Keep</button></div>` : `<div class="row"><button class="btn ghost sm" data-act="erase" ${D.items.size ? '' : 'disabled'}>Erase everything</button></div>`}</section>
-<section><h3>How it works</h3><ul class="steps"><li>Each save shows the real post. Tap a folder at the bottom and the next one appears.</li><li><b>Skip</b> shows it again later. <b>Don’t need</b> sets it aside (it stays saved on Instagram). <b>Undo</b> takes back your last tap.</li><li><b>Folders</b> at the top lists everything you’ve sorted. Tap a post there to see it, move it, or open it in Instagram.</li></ul></section>
+<section><h3>Start over</h3>${eraseAsk ? `<div class="row"><span class="small">Erase all saves and collections from Savepoint in this browser? Instagram isn’t changed.</span><button class="btn sm danger" data-act="erase-yes">Erase</button><button class="btn sm ghost" data-act="erase-no">Keep</button></div>` : `<div class="row"><button class="btn ghost sm" data-act="erase" ${D.items.size ? '' : 'disabled'}>Erase everything</button></div>`}</section>
+<section><h3>How it works</h3><ul class="steps"><li>Your Instagram collections come in with the posts already in them.</li><li><b>Sort</b> shows each save that isn’t in a collection yet. Tap a collection at the bottom, or <b>New collection</b>, and the next one appears.</li><li><b>Skip</b> shows it again later. <b>Don’t need</b> sets it aside (it stays saved on Instagram). <b>Undo</b> takes back your last tap.</li><li><b>Collections</b> at the top lists everything. Tap a post there to see it, move it, or open it in Instagram.</li><li>Savepoint can’t change Instagram. To put a post in the collection on Instagram too, open it in Instagram and save it to that collection.</li></ul></section>
 </div></div>`;
 }
 
@@ -596,35 +621,56 @@ async function importFiles(files, statusEl) {
   files = files.filter(Boolean); if (!files.length) return;
   if (!rawInflate) { say('This browser is too old to open ZIP files. Update Chrome, then try again.', 'err'); return; }
   say(`Reading ${esc(files.length === 1 ? files[0].name || 'your file' : plural(files.length, 'file'))}…`);
-  const res = newImport(); let backup = null, html = 0;
+  const res = newImport(); let backup = null, html = 0, colFiles = 0;
   try {
     for (const f of files) {
       const type = await sniffFile(f);
       if (type === 'zip') {
-        for (const e of await zipEntries(f)) { const k = kindOf(e.name); if (k === 'html') { html++; continue; } if (k !== 'saved' && k !== 'cols') continue; try { addParsed(res, k, JSON.parse((await e.text()).replace(/^﻿/, ''))); } catch (er) { /* skip unreadable file */ } }
+        for (const e of await zipEntries(f)) { const k = kindOf(e.name); if (k === 'html') { html++; continue; } if (k !== 'saved' && k !== 'cols') continue; try { addParsed(res, k, JSON.parse((await e.text()).replace(/^\uFEFF/, ''))); if (k === 'cols') colFiles++; } catch (er) { /* skip unreadable file */ } }
       } else if (type === 'json') {
-        let j; try { j = JSON.parse((await f.text()).replace(/^﻿/, '')); } catch (er) { continue; }
+        let j; try { j = JSON.parse((await f.text()).replace(/^\uFEFF/, '')); } catch (er) { continue; }
         if (j && (j.app === 'savepoint' || j.app === 'savepoint-web')) { backup = j; continue; }
-        const k = kindOf(f.name || '') || sniff(j); if (k === 'saved' || k === 'cols') addParsed(res, k, j);
+        const k = kindOf(f.name || '') || sniff(j); if (k === 'saved' || k === 'cols') { addParsed(res, k, j); if (k === 'cols') colFiles++; }
       } else if (type === 'html') html++;
     }
   } catch (e) { say(e && e.message === 'notzip' ? 'That ZIP is incomplete. Download it again from Instagram, then try once more.' : 'Couldn’t read that file. Choose the ZIP Instagram gave you.', 'err'); return; }
   if (backup) { const n = restoreBackup(backup); say(`Restored ${plural(n, 'save')} from your backup.`); Q = null; go('sort'); return; }
   if (!res.saved.length && !res.cols.length) { say(html ? 'This download is in HTML format. Request a new one and choose JSON as the format.' : 'No saved posts in that file. When you request the download, tick Saved.', 'err'); return; }
-  let added = 0, made = 0; const byName = new Map();
-  for (const name of new Set(res.cols.map(c => c.col))) { const had = D.folders.length; byName.set(name, addFolder(name)); if (D.folders.length > had) made++; }
-  for (const p of [...res.saved, ...res.cols]) {
+  // Instagram's collections file decides what's in each collection. Posts you sorted yourself are left alone.
+  const names = [...new Set(res.cols.map(c => c.col))];
+  const mem = new Map(); for (const c of res.cols) { if (!c || !c.id) continue; if (!mem.has(c.id)) mem.set(c.id, []); if (!mem.get(c.id).includes(c.col)) mem.get(c.id).push(c.col); }
+  let added = 0, removed = 0;
+  for (const p of res.saved.concat(res.cols)) {
     if (!p || !p.id) continue;
     let it = D.items.get(p.id);
     if (!it) { it = {a: p.author || '', t: p.type === 'reel' ? 'r' : 'p', s: p.ts || 0, cp: p.cap || '', n: '', c: [], f: '', x: 0, at: 0}; D.items.set(p.id, it); added++; }
     else { if (!it.a && p.author) it.a = p.author; if (!it.s && p.ts) it.s = p.ts; if (!it.cp && p.cap) it.cp = p.cap; }
-    if (p.col && !it.c.includes(p.col)) it.c.push(p.col);
-    if (!it.f && !it.x && it.c.length) { const f = byName.get(it.c[0]); if (f) { it.f = f.id; it.at = it.s || nowS(); } }
   }
+  if (colFiles) {
+    for (const [id, it] of D.items) {
+      it.c = mem.get(id) || [];
+      const f = folderById(it.f);
+      if (f && importPlaced(it) && !it.c.includes(f.name)) { it.f = ''; it.at = 0; delete it.by; }
+    }
+    const keep = new Set(names.map(n => n.toLowerCase()));
+    D.folders = D.folders.filter(f => {
+      if (keep.has(f.name.toLowerCase()) || f.ig === false) return true;
+      if ([...D.items.values()].some(it => it.f === f.id)) { f.ig = false; return true; }
+      removed++; return false;
+    });
+  }
+  const byName = new Map(); for (const n of names) byName.set(n, addFolder(n, true));
+  for (const it of D.items.values()) if (!it.f && !it.x && it.c && it.c.length) { const f = byName.get(it.c[0]); if (f) { it.f = f.id; it.at = it.s || nowS(); it.by = 'ig'; } }
   saveNow(); Q = null;
-  say(`Added ${plural(added, 'save')}${made ? `. ${plural(made, 'Instagram collection')} became ${made === 1 ? 'a folder' : 'folders'}` : ''}. ${fmtN(unsortedIds().length)} left to sort.`);
+  lastImport = {added, total: D.items.size, cols: names, colFiles, removed};
   toast(`Added ${plural(added, 'save')}`);
   closeMenu(); go('sort');
+}
+let lastImport = null;
+function summaryHTML() {
+  const L = lastImport; if (!L) return '';
+  const list = L.cols.map(n => { const f = D.folders.find(x => x.name === n); return f ? `<span class="tag" style="--c:var(--b${f.c})">${esc(n)} · ${fmtN(countIn(f.id))}</span>` : ''; }).join(' ');
+  return `<section class="summary" role="status"><p><b>${fmtN(L.total)} saves${L.added && L.added !== L.total ? ` (${fmtN(L.added)} new)` : ''}.</b> ${L.cols.length ? `Your ${plural(L.cols.length, 'collection')} from Instagram, with the posts already in them:` : L.colFiles ? 'Instagram’s file had no collections Savepoint could read.' : 'This download didn’t include your collections. Request a new one with Saved ticked.'}</p>${list ? `<p class="tags">${list}</p>` : ''}${L.removed ? `<p class="small mut">Removed ${plural(L.removed, 'old collection')} that an earlier import got wrong.</p>` : ''}<p class="small mut">${fmtN(unsortedIds().length)} aren’t in a collection yet. They’re below, one at a time.</p><button class="btn sm ghost" data-act="summary-ok">Got it</button></section>`;
 }
 function restoreBackup(j) {
   let n = 0;
@@ -634,7 +680,7 @@ function restoreBackup(j) {
     if (j.order) D.order = j.order;
   } else {
     const map = new Map();
-    for (const b of (j.meta && j.meta.boards) || []) { const f = addFolder(b.name); if (f) map.set(b.id, f.id); }
+    for (const b of (j.meta && j.meta.boards) || []) { const f = addFolder(b.name, !!b.ig); if (f) map.set(b.id, f.id); }
     for (const o of j.items || []) { if (!o || !o.i) continue; D.items.set(o.i, {a: o.a || '', t: o.t === 'r' ? 'r' : 'p', s: o.s || 0, cp: o.cp || '', n: o.n || '', c: o.c || [], f: (o.b && map.get(o.b)) || '', x: o.x ? 1 : 0, at: o.f || 0}); n++; }
   }
   saveNow(); return n;
@@ -668,7 +714,8 @@ const ACT = {
   more: () => { shown += 50; vFolder(); },
   editf: () => { folderEdit = true; folderDel = false; vFolder(); }, 'editf-cancel': () => { folderEdit = false; vFolder(); },
   delf: () => { folderDel = true; vFolder(); }, 'delf-no': () => { folderDel = false; vFolder(); },
-  'delf-yes': () => { const id = decodeURIComponent(location.hash.slice(3)); for (const it of D.items.values()) if (it.f === id) { it.f = ''; it.at = 0; } const i = D.folders.findIndex(f => f.id === id); if (i >= 0) D.folders.splice(i, 1); folderEdit = folderDel = false; Q = null; save(); toast('Folder deleted'); location.hash = 'folders'; },
+  'delf-yes': () => { const id = decodeURIComponent(location.hash.slice(3)); for (const it of D.items.values()) if (it.f === id) { it.f = ''; it.at = 0; } const i = D.folders.findIndex(f => f.id === id); if (i >= 0) D.folders.splice(i, 1); folderEdit = folderDel = false; Q = null; save(); toast('Collection removed from Savepoint'); location.hash = 'collections'; },
+  'summary-ok': () => { lastImport = null; const el = $('#summary'); if (el) el.innerHTML = ''; },
 };
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
@@ -676,14 +723,14 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('submit', e => {
   e.preventDefault(); const t = e.target;
-  if (t.id === 'newf') { const f = addFolder($('#nf').value); newFolderOpen = false; if (f) fileTo(f.id, null); else render(); }
-  else if (t.id === 'newf2') { const f = addFolder($('#nf2').value); newFolderOpen = false; if (f) toast(`Folder “${f.name}” added`); vFolders(); }
+  if (t.id === 'newf') { const f = addFolder($('#nf').value, false); newFolderOpen = false; if (f) fileTo(f.id, null); else render(); }
+  else if (t.id === 'newf2') { const f = addFolder($('#nf2').value, false); newFolderOpen = false; if (f) toast(`Collection “${f.name}” added`); vFolders(); }
   else if (t.id === 'renamef') { const f = folderById(decodeURIComponent(location.hash.slice(3))); const v = $('#rn').value.trim().slice(0, 40); if (f && v) { f.name = v; save(); } folderEdit = false; vFolder(); }
 });
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.id === 'pick' || t.id === 'pick2') { const files = [...(t.files || [])]; t.value = ''; importFiles(files, () => $(t.id === 'pick' ? '#status' : '#status2')); }
-  else if (t.dataset.move) { const it = D.items.get(t.dataset.move); if (!it || !t.value) return; if (t.value === '_none') { it.f = ''; it.x = 0; it.at = 0; } else { it.f = t.value; it.x = 0; it.at = nowS(); } save(); toast(t.value === '_none' ? 'Moved to Not sorted yet' : `Moved to ${folderById(t.value).name}`); openRow = null; Q = null; vFolder(); render(); }
+  else if (t.dataset.move) { const it = D.items.get(t.dataset.move); if (!it || !t.value) return; delete it.by; if (t.value === '_none') { it.f = ''; it.x = 0; it.at = 0; } else { it.f = t.value; it.x = 0; it.at = nowS(); } save(); toast(t.value === '_none' ? 'Moved to Not in a collection' : `Moved to ${folderById(t.value).name}`); openRow = null; Q = null; vFolder(); render(); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closeMenu(); });
 if ('ResizeObserver' in window) new ResizeObserver(sizeDock).observe($('#dock'));

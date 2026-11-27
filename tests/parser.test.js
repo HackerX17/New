@@ -76,6 +76,33 @@ const capC = {saved_saved_media: [{timestamp: 3, label_values: [{label: 'Caption
 ok(P.parseSaved(capC)[0].author === '', 'one-word caption is not used as the author');
 ok(P.parseSaved(saved)[0].cap === '', 'no caption when the export has none');
 
+// Newer collections files: headers may link to the Saved collection; posts with no usable link must be skipped, not
+// mistaken for collections (that bug created collections named after creators).
+const colsNew = {saved_saved_collections: [
+  {title: 'Collection', string_map_data: {Name: {value: 'AI tools', href: 'https://www.instagram.com/someone/saved/ai-tools/17890000000000001/'}, 'Creation Time': {timestamp: 1}, 'Update Time': {timestamp: 2}}},
+  {string_map_data: {Name: {value: 'Daniel Beleiu', href: 'https://www.instagram.com/reel/AiPost00001/'}, 'Added Time': {timestamp: 3}}},
+  {title: 'Daniel Beleiu', string_map_data: {Name: {value: 'Daniel Beleiu'}, 'Added Time': {timestamp: 4}}},
+  {title: 'UFD Tech', string_map_data: {Name: {value: 'UFD Tech'}}},
+  {string_map_data: {Name: {value: 'UFD Tech', href: 'https://www.instagram.com/p/AiPost00002/'}, 'Added Time': {timestamp: 5}}},
+  {string_map_data: {Name: {value: 'Money'}, 'Creation Time': {timestamp: 6}}},
+  {string_map_data: {Name: {value: 'Sumit', href: 'https://www.instagram.com/p/MoneyPost01/'}, 'Added Time': {timestamp: 7}}},
+]};
+r = P.parseCollections(colsNew);
+ok(r.length === 3, 'newer collections file: 3 posts found, unlinked entries skipped (' + r.length + ')');
+ok(r[0].col === 'AI tools' && r[1].col === 'AI tools', 'header that links to the Saved collection is used as the collection name');
+ok(r[1].id === 'AiPost00002', 'an unlinked post does not start a fake collection named after its creator');
+ok(r[2].col === 'Money' && r[2].id === 'MoneyPost01', 'header without a title but with Creation Time starts a new collection');
+ok(!r.some(x => /Beleiu|UFD/.test(x.col)), 'no collection is named after a creator');
+
+const colsLabels = {saved_saved_collections: [
+  {label_values: [{label: 'Collection name', value: 'Music'}, {label: 'Creation Time', timestamp_value: 1}]},
+  {label_values: [{label: 'URL', value: 'https://www.instagram.com/reel/MusicReel01/'}, {label: 'Name', value: 'Smply Sound'}, {label: 'Added Time', timestamp_value: 2}]},
+  {label_values: [{label: 'Name', value: 'Gone Creator'}, {label: 'Added Time', timestamp_value: 3}]},
+  {label_values: [{label: 'URL', value: 'https://www.instagram.com/p/MusicPost02/'}, {label: 'Name', value: 'Ella Rose'}, {label: 'Added Time', timestamp_value: 4}]},
+]};
+r = P.parseCollections(colsLabels);
+ok(r.length === 2 && r.every(x => x.col === 'Music'), 'label-style collections file: posts land in "Music", the unlinked one is skipped');
+
 // Pipeline
 const res = P.newImport(); P.addParsed(res, 'saved', saved); P.addParsed(res, 'followers', followers); P.addParsed(res, 'followers', followers);
 ok(res.saved.length === 2 && res.followers.length === 2 && res.files === 3, 'addParsed accumulates split follower files');

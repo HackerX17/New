@@ -69,6 +69,16 @@ write_zip(f'{out}/export_zip64.zip', extra_files=66000, media=False)  # >65,535 
 with zipfile.ZipFile(f'{out}/export_html.zip', 'w', zipfile.ZIP_DEFLATED) as z:
     z.writestr('your_instagram_activity/saved/saved_posts.html', '<html></html>')
     z.writestr('connections/followers_and_following/followers_1.html', '<html></html>')
+# Newer layout: collection headers link to the Saved collection; a deleted post has no link and must be skipped.
+cols_new = []
+for ci, nm in enumerate(['AI tools', 'Money', mojibake('Music 🎧')]):
+    cols_new.append({'title': 'Collection', 'string_map_data': {'Name': {'value': nm, 'href': f'https://www.instagram.com/someone/saved/c{ci}/1789{ci:011d}/'}, 'Creation Time': {'timestamp': 1600000000 + ci}, 'Update Time': {'timestamp': 1600000100 + ci}}})
+    for e in saved[100 + ci * 10: 100 + ci * 10 + 8]:
+        cols_new.append({'string_map_data': {'Name': {'value': 'Display Name ' + e['title'], 'href': e['string_map_data']['Saved on']['href']}, 'Added Time': {'timestamp': e['string_map_data']['Saved on']['timestamp']}}})
+    cols_new.append({'title': 'Gone Creator', 'string_map_data': {'Name': {'value': 'Gone Creator'}, 'Added Time': {'timestamp': 1600000200 + ci}}})
+with zipfile.ZipFile(f'{out}/export_newcols.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+    z.writestr('your_instagram_activity/saved/saved_posts.json', json.dumps(saved_posts))
+    z.writestr('your_instagram_activity/saved/saved_collections.json', json.dumps({'saved_saved_collections': cols_new}))
 data = open(f'{out}/export.zip', 'rb').read()
 open(f'{out}/export_truncated.zip', 'wb').write(data[:len(data) // 2])
 open(f'{out}/random.bin', 'wb').write(os.urandom(5000))

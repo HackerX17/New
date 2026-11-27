@@ -607,13 +607,25 @@ function postEntries(e) {
   walk(e, e);
   return res;
 }
+// A collections file lists each collection as a header entry followed by its posts. A header is marked as one:
+// titled "Collection", dated with Creation/Update Time, labelled "Collection name", or linking to a Saved collection.
+// Anything else without a post link (a deleted or private post) is skipped and never becomes a collection.
+function isCollectionHeader(e) {
+  if (!e || typeof e !== 'object') return false;
+  if (typeof e.title === 'string' && /^collections?$/i.test(e.title.trim())) return true;
+  const sc = scan(e);
+  const keys = Object.keys(e.string_map_data || {}).join('|') + '|' + Object.keys(sc.labels).join('|');
+  if (/added time|saved on/i.test(keys)) return false;
+  if (/creation time|update time|collection name/i.test(keys)) return true;
+  return sc.urls.some(u => /instagram\.com\/(?:[A-Za-z0-9._]+\/)?saved\//i.test(u) || /instagram\.com\/collections?\//i.test(u));
+}
 function headerName(e) {
   if (!e || typeof e !== 'object') return '';
   const smd = e.string_map_data;
-  if (smd) { const nm = smd.Name || smd.name || smd['Collection name']; if (nm && typeof nm.value === 'string' && !nm.href) return fixText(nm.value).trim(); }
-  if (typeof e.title === 'string' && e.title.trim() && !/^collections?$/i.test(e.title.trim())) return fixText(e.title).trim();
+  if (smd) { const nm = smd.Name || smd.name || smd['Collection name'] || smd['Collection Name']; if (nm && typeof nm.value === 'string' && nm.value.trim()) return fixText(nm.value).trim(); }
   const sc = scan(e);
-  for (const k of ['collection name', 'collection', 'name']) if (typeof sc.labels[k] === 'string') return fixText(sc.labels[k]).trim();
+  for (const k of ['collection name', 'name', 'collection']) if (typeof sc.labels[k] === 'string' && sc.labels[k].trim()) return fixText(sc.labels[k]).trim();
+  if (typeof e.title === 'string' && e.title.trim() && !/^collections?$/i.test(e.title.trim())) return fixText(e.title).trim();
   return '';
 }
 function colItem(e, url, col, skipTitle = true) {
@@ -628,8 +640,8 @@ function parseCollections(j) {
   const out = []; let cur = '';
   for (const e of entriesOf(j)) {
     const posts = postEntries(e);
-    if (!posts.length) { const h = headerName(e); if (h) cur = h; continue; }
-    if (posts.length === 1) out.push(colItem(e, posts[0].url, cur));
+    if (!posts.length) { if (isCollectionHeader(e)) { const h = headerName(e); if (h) cur = h; } continue; }
+    if (posts.length === 1 && !isCollectionHeader(e)) out.push(colItem(e, posts[0].url, cur));
     else { const h = headerName(e) || cur; for (const p of posts) out.push(colItem(p.entry === e ? {} : p.entry, p.url, h, false)); }
   }
   return out.filter(x => x && x.col);
@@ -679,7 +691,7 @@ function sniff(j) {
 }
 function newImport() { return {saved: [], cols: [], liked: [], followers: null, following: null, unfollowed: null, close: null, html: 0, files: 0}; }
 function addParsed(res, kind, j) {
-  res.files++;
+  res.files++; res.kinds = res.kinds || {}; res.kinds[kind] = (res.kinds[kind] || 0) + 1;
   if (kind === 'saved') res.saved.push(...parseSaved(j));
   else if (kind === 'cols') res.cols.push(...parseCollections(j));
   else if (kind === 'liked') res.liked.push(...parseLiked(j));
@@ -1821,8 +1833,24 @@ function mergeImport() {
     let it = S.items.get(p.id);
     if (!it) { it = newItem(p); S.items.set(p.id, it); added++; }
     else { if (!it.author && p.author) it.author = p.author; if (p.ts && !it.savedAt) it.savedAt = p.ts; if (p.cap && !it.cap) it.cap = p.cap; }
-    if (p.col && !it.cols.includes(p.col)) it.cols.push(p.col);
     touched.push(it);
+  }
+  // Instagram's collections file decides what's in each collection; boards you sorted into yourself are left alone.
+  let fixed = 0;
+  if (r.kinds && r.kinds.cols) {
+    const mem = new Map(); for (const c of r.cols) { if (!c || !c.id) continue; if (!mem.has(c.id)) mem.set(c.id, []); if (!mem.get(c.id).includes(c.col)) mem.get(c.id).push(c.col); }
+    for (const [id, it] of S.items) {
+      it.cols = mem.get(id) || [];
+      const b = boardById(it.board);
+      if (b && b.ig && it.filedAt && it.filedAt === it.savedAt && !it.cols.includes(b.name)) { it.board = null; it.filedAt = 0; markItem(id); }
+    }
+    const keep = new Set(r.cols.map(c => c.col.toLowerCase()));
+    S.boards = S.boards.filter(b => {
+      if (!b.ig || keep.has(b.name.toLowerCase())) return true;
+      if ([...S.items.values()].some(it => it.board === b.id)) { b.ig = false; return true; }
+      fixed++; for (const [a, bb] of Object.entries(S.rules)) if (bb === b.id) delete S.rules[a]; return false;
+    });
+    touched.length = 0; touched.push(...S.items.values());
   }
   let colBoards = 0;
   if (colsOn) {
@@ -1841,7 +1869,7 @@ function mergeImport() {
   }
   S.importedAt = nowS(); S.mode = 'real'; SORT.built = false;
   markAll(); Store.flush();
-  const parts = [`${plural(added, 'new save')} added`]; if (colBoards) parts.push(`${plural(colBoards, 'collection')} became boards`); if (ruled) parts.push(`${plural(ruled, 'save')} filed by your rules`);
+  const parts = [`${plural(added, 'new save')} added`]; if (colBoards) parts.push(`${plural(colBoards, 'collection')} became boards`); if (fixed) parts.push(`${plural(fixed, 'wrong board')} from an earlier import removed`); if (ruled) parts.push(`${plural(ruled, 'save')} filed by your rules`);
   UI.imp = {status: 'merged', msg: parts.join(', ') + '.'};
   award(added ? 50 : 0); checkAch(); renderChrome(); refreshImp();
   if (added) confetti();

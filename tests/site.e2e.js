@@ -55,8 +55,12 @@ const file = (n, as, mime = 'application/octet-stream') => ({name: as || n, mime
 
     await p.setInputFiles('#pick', file('export.zip', 'instagram-download'));
     await p.waitForSelector('#frame iframe');
-    ok((await left(p)) === 340, 'imports 400 saves; 60 already in Instagram collections, 340 left');
-    ok(await p.locator('.fbtn[data-act=file]').count() === 4, 'Instagram collections became 4 folders');
+    ok((await left(p)) === 340, 'imports 400 saves; 60 already in Instagram collections, 340 to sort');
+    ok(await p.locator('.fbtn[data-act=file]').count() === 4, 'your 4 Instagram collections are the only collections');
+    const sum = await txt(p, '#summary');
+    ok(/Your 4 collections from Instagram/.test(sum) && /Recipes 🍜 · 15/.test(sum) && /340 aren’t in a collection yet/.test(sum), 'import summary lists your collections and counts: ' + sum.slice(0, 120));
+    ok(/Not in a collection yet/i.test(await txt(p, '#post .eyebrow')), 'sort screen says the post isn’t in a collection yet');
+    await p.click('[data-act=summary-ok]'); ok(!(await p.locator('.summary').count()), 'Got it hides the summary');
     let id = await curId(p);
     const src = await p.locator('#frame iframe:not([hidden])').getAttribute('src');
     ok(/^https:\/\/www\.instagram\.com\/(p|reel)\/C[\w-]{10}\/embed\/captioned\/$/.test(src), 'shows the real post with Instagram’s embed: ' + src);
@@ -70,11 +74,11 @@ const file = (n, as, mime = 'application/octet-stream') => ({name: as || n, mime
     const dockH = await p.locator('#dock').evaluate(d => d.offsetHeight), padB = await p.evaluate(() => parseFloat(getComputedStyle(document.body).paddingBottom));
     ok(padB >= dockH, `page leaves room above the folder buttons (${padB} ≥ ${dockH})`);
     const vh = p.viewportSize().height, fb = await p.locator('.fbtn').first().boundingBox();
-    ok(fb.y + fb.height <= vh && fb.y > vh * 0.4, 'folder buttons sit at the bottom of the screen, always tappable');
+    ok(fb.y + fb.height <= vh && fb.y > vh * 0.4, 'collection buttons sit at the bottom of the screen, always tappable');
 
     // File, skip, don't need, undo
     await p.click('.fbtn[data-act=file] >> nth=0'); await p.waitForTimeout(150);
-    ok((await left(p)) === 339 && (await curId(p)) !== id, 'tapping a folder files it and shows the next post');
+    ok((await left(p)) === 339 && (await curId(p)) !== id, 'tapping a collection files it and shows the next post');
     ok(await p.locator('#frame').evaluate(f => f.classList.contains('ready')), 'the next post appears right away (it was preloaded)');
     id = await curId(p); await p.click('[data-act=skip]'); await p.waitForTimeout(100);
     ok((await left(p)) === 339 && (await curId(p)) !== id, 'Skip moves on without filing');
@@ -83,7 +87,7 @@ const file = (n, as, mime = 'application/octet-stream') => ({name: as || n, mime
 
     // New folder from the dock
     await p.click('[data-act=newfolder]'); await p.fill('#nf', 'Date night'); await p.press('#nf', 'Enter'); await p.waitForTimeout(100);
-    ok((await left(p)) === 338 && await p.locator('.fbtn', {hasText: 'Date night'}).count() === 1, 'make a folder while sorting and file into it');
+    ok((await left(p)) === 338 && await p.locator('.fbtn', {hasText: 'Date night'}).count() === 1, 'make a collection while sorting and file into it');
 
     // By-creator order and the "put them all in" offer
     await p.click('#menubtn'); await p.click('[data-act=order][data-v=creator]'); await p.click('#closemenu');
@@ -95,24 +99,25 @@ const file = (n, as, mime = 'application/octet-stream') => ({name: as || n, mime
 
     // Folders
     await p.click('#tab-folders'); await p.waitForSelector('.frow');
-    ok(await p.locator('.list').first().locator('.frow').count() === 5, 'Folders lists every folder');
-    ok(/Not sorted yet/.test(await txt(p, '.sep')) && /Don’t need/.test(await txt(p, '.sep')), 'Not sorted yet and Don’t need are listed too');
+    ok(await p.locator('.list').first().locator('.frow').count() === 5, 'Collections lists every collection');
+    ok(await p.locator('.frow', {hasText: 'Date night'}).locator('.tag', {hasText: 'New'}).count() === 1 && await p.locator('.frow', {hasText: 'Trips'}).locator('.tag').count() === 0, 'a collection made here is marked New; Instagram ones are not');
+    ok(/Not in a collection/.test(await txt(p, '.sep')) && /Don’t need/.test(await txt(p, '.sep')), 'Not in a collection and Don’t need are listed too');
     await p.click('.frow >> nth=0'); await p.waitForSelector('.prow');
     const before = await p.locator('.prow').count();
     await p.click('.prow >> nth=0 >> button'); await p.waitForSelector('.prow[open] iframe');
-    ok(/embed\/captioned/.test(await p.locator('.prow[open] iframe').getAttribute('src')), 'tap a post in a folder to see it');
+    ok(/embed\/captioned/.test(await p.locator('.prow[open] iframe').getAttribute('src')), 'tap a post in a collection to see it');
     await p.selectOption('.prow[open] select', {label: 'Date night'}); await p.waitForTimeout(100);
-    ok(await p.locator('.prow').count() === before - 1, 'move a post to another folder');
+    ok(await p.locator('.prow').count() === before - 1, 'move a post to another collection');
     await p.click('.prow >> nth=0 >> button'); await p.click('.prow[open] [data-act=rowdont]');
-    ok(await p.locator('.prow').count() === before - 2, 'Don’t need from a folder');
+    ok(await p.locator('.prow').count() === before - 2, 'Don’t need from a collection');
     await p.click('[data-act=editf]'); await p.fill('#rn', 'Recipes to cook'); await p.press('#rn', 'Enter');
-    ok(/Recipes to cook/.test(await txt(p, 'h1')), 'rename a folder');
+    ok(/Recipes to cook/.test(await txt(p, 'h1')), 'rename a collection');
     await p.click('[data-act=editf]'); await p.click('[data-act=delf]'); await p.click('[data-act=delf-yes]'); await p.waitForSelector('.frow');
-    ok(!(await p.locator('.frow', {hasText: 'Recipes to cook'}).count()), 'delete a folder; its posts go back to Not sorted yet');
+    ok(!(await p.locator('.frow', {hasText: 'Recipes to cook'}).count()), 'remove a collection; its posts go back to Not in a collection');
     await p.click('.sep .frow >> nth=1'); await p.waitForSelector('.prow');
     await p.click('.prow >> nth=0 >> button'); await p.click('.prow[open] [data-act=restore]'); ok(true, 'bring a post back from Don’t need');
-    await p.click('.back'); await p.click('[data-act=newfolder2]'); await p.fill('#nf2', 'Fits'); await p.press('#nf2', 'Enter');
-    ok(await p.locator('.frow', {hasText: 'Fits'}).count() === 1, 'add a folder from the Folders page');
+    await p.click('.back'); await p.click('[data-act=newfolder2]'); await p.fill('#nf2', 'Gift ideas'); await p.press('#nf2', 'Enter');
+    ok(await p.locator('.frow', {hasText: 'Gift ideas'}).count() === 1, 'add a collection from the Collections page');
 
     // Menu: links, backup, erase, restore
     await p.click('#tab-sort'); await p.click('#menubtn');
@@ -132,11 +137,43 @@ const file = (n, as, mime = 'application/octet-stream') => ({name: as || n, mime
     await p.click('#menubtn'); await p.click('[data-act=erase]'); await p.click('[data-act=erase-yes]');
     const claudeBackup = {app: 'savepoint', version: 1, meta: {boards: [{id: 'bX', name: 'Travel', color: 3}]}, items: [{i: 'CLAUDEA0001', a: 'wren', t: 'r', s: 1700000000, b: 'bX'}, {i: 'CLAUDEA0002', a: 'kai', t: 'p', s: 1700000001}, {i: 'CLAUDEA0003', a: 'zoe', t: 'p', s: 1700000002, x: 1}]};
     await p.setInputFiles('#pick', {name: 'savepoint-backup-2026-11-27.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(claudeBackup))}); await p.waitForSelector('#frame iframe');
-    ok((await left(p)) === 1 && await p.locator('.fbtn', {hasText: 'Travel'}).count() === 1, 'bring in a backup from the Claude version, boards become folders');
+    ok((await left(p)) === 1 && await p.locator('.fbtn', {hasText: 'Travel'}).count() === 1, 'bring in a backup from the Claude version, boards become collections');
 
     for (const h of ['sort', 'folders']) { await p.evaluate(x => { location.hash = x; }, h); await p.waitForTimeout(150); ok((await overflow(p)) <= 0, 'no sideways scrolling on ' + h); }
     ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
     await ctx.close();
+
+    console.log('\n== Re-importing fixes collections an earlier import got wrong ==');
+    {
+      const errs3 = [];
+      const c4 = await browser.newContext({...devices['Pixel 7']});
+      const q = await page(c4, errs3, 'reimport');
+      const saved = JSON.parse(fs.readFileSync(fx('saved_posts.json'), 'utf8')).saved_saved_media;
+      const idOf = e => e.string_map_data['Saved on'].href.match(/\/(p|reel)\/([^/]+)\//)[2];
+      const tsOf = e => e.string_map_data['Saved on'].timestamp;
+      // The state the old importer left: collections named after creators, holding posts it put there itself.
+      const seed = {v: 1, order: 'new', folders: [{id: 'fBEL', name: 'Daniel Beleiu', c: 1}, {id: 'fUFD', name: 'UFD Tech', c: 2}], items: {}};
+      saved.slice(0, 6).forEach((e, i) => { seed.items[idOf(e)] = {a: e.title, t: 'p', s: tsOf(e), cp: '', n: '', c: [i < 3 ? 'Daniel Beleiu' : 'UFD Tech'], f: i < 3 ? 'fBEL' : 'fUFD', x: 0, at: tsOf(e)}; });
+      const mine = idOf(saved[6]); seed.items[mine] = {a: saved[6].title, t: 'p', s: tsOf(saved[6]), cp: '', n: '', c: [], f: 'fBEL', x: 0, at: tsOf(saved[6]) + 999};
+      await c4.addInitScript(st => { if (!sessionStorage.getItem('seeded')) { localStorage.setItem('savepoint-web-v1', JSON.stringify(st)); sessionStorage.setItem('seeded', '1'); } }, seed);
+      await q.goto(BASE);
+      await q.waitForSelector('#main h1'); ok(/All sorted/.test(await txt(q, '#main h1')), 'starting point: the old import left everything in creator-named collections');
+      await q.click('#menubtn'); await q.setInputFiles('#pick2', file('export_newcols.zip', 'instagram-export.zip')); await q.waitForSelector('#summary .summary');
+      const sm = await txt(q, '#summary');
+      ok(/Your 3 collections from Instagram/.test(sm) && /AI tools · 8/.test(sm) && /Money · 8/.test(sm) && /Music 🎧 · 8/.test(sm), 'real collections come in with their posts: ' + sm.slice(0, 140));
+      ok(/Removed 1 old collection/.test(sm), 'the wrong collection the old import made is removed');
+      ok((await left(q)) === 400 - 24 - 1, 'posts the old import misplaced go back to sorting; the one you sorted stays (375 to sort)');
+      await q.click('#tab-folders'); await q.waitForSelector('.frow');
+      const names = await q.locator('.list').first().locator('.frow .nm').allInnerTexts();
+      ok(names.join('|') === 'Daniel Beleiu|AI tools|Money|Music 🎧', 'collections: yours from Instagram, plus the one holding a post you sorted: ' + names.join(', '));
+      ok(await q.locator('.frow', {hasText: 'Daniel Beleiu'}).locator('.tag', {hasText: 'New'}).count() === 1, 'that one is marked New (not on Instagram)');
+      await q.click('.frow >> text=AI tools'); await q.waitForSelector('.prow');
+      ok(await q.locator('.prow').count() === 8 && !(await q.locator('.prow .tag', {hasText: 'Added here'}).count()), 'AI tools holds exactly its 8 Instagram posts');
+      await q.click('#tab-sort'); await q.click('.fbtn[data-act=file] >> text=AI tools'); await q.click('#tab-folders'); await q.click('.frow >> text=AI tools'); await q.waitForSelector('.prow');
+      ok(await q.locator('.prow').count() === 9 && await q.locator('.prow .tag', {hasText: 'Added here'}).count() === 1, 'a post you sort into it shows “Added here”');
+      ok(errs3.length === 0, 'no page errors' + (errs3.length ? ': ' + errs3.join(' | ') : ''));
+      await c4.close();
+    }
 
     console.log('\n== Desktop and iPhone ==');
     const errs2 = [];

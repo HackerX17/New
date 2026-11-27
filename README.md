@@ -5,7 +5,7 @@ Sort everything you've saved on Instagram into folders, one post at a time.
 There are two versions:
 
 - **The website (start here):** https://hackerx17.github.io/New/
-  - It shows each saved post itself, using Instagram's official embed, with your folders as big buttons at the bottom of the screen. Tap a folder and the next post appears.
+  - It shows each saved post itself, using Instagram's official embed, with your collections as big buttons at the bottom of the screen. Tap a collection and the next post appears.
   - **Open in Instagram** jumps straight into the Instagram app on Android.
   - It runs in any browser, with no sign-in. Your sorting is saved in that browser.
 - **The Claude version:** https://claude.ai/artifact/7kJG9uC59nBhzq5JfrWx5V
@@ -25,10 +25,10 @@ After about a minute it's live at https://hackerx17.github.io/New/.
 
 How it works:
 
-- **Choose your Instagram ZIP.** Your Instagram collections become folders, and posts already in them are filed.
-- **Sort:** you see the post, then tap a folder. **Skip** shows it again later. **Don't need** sets it aside (it stays saved on Instagram). **Undo** takes back your last tap.
-- **Creator shortcut:** when a creator has more posts waiting, you can put them all in the same folder at once.
-- **Folders:** lists everything you've sorted. Tap a post to see it, move it, or open it in Instagram.
+- **Choose your Instagram ZIP.** Your Instagram collections come in as they are, with the posts already in them. A summary lists each collection and its count so you can check it. Instagram's collections file decides what's in each one: re-importing fixes anything an earlier import got wrong, and posts you sorted yourself stay where you put them.
+- **Sort:** you see each post that isn't in a collection yet, then tap a collection or make a **New collection**. **Skip** shows it again later. **Don't need** sets it aside (it stays saved on Instagram). **Undo** takes back your last tap.
+- **Creator shortcut:** when a creator has more posts waiting, you can put them all in the same collection at once.
+- **Collections:** lists everything. Collections made here are marked **New**, and posts you sorted here are marked **Added here**: Savepoint can't change Instagram, so those aren't in the collection on Instagram until you save them there. Tap a post to see it, move it, or open it in Instagram.
 - **Menu:**
   - add more saves (a new ZIP, or pasted post links)
   - change the sort order
@@ -97,18 +97,18 @@ When it runs outside claude.ai, Savepoint saves to local storage and can show In
 ## Tests
 
 ```sh
-node tests/parser.test.js                         # parser, 22 checks
+node tests/parser.test.js                         # parser, 28 checks
 python3 tests/make_fixtures.py /tmp/fx            # fake Instagram downloads (fictional accounts)
 ./scripts/build.sh
-node tests/site.e2e.js /tmp/fx                    # the website, 40 checks
+node tests/site.e2e.js /tmp/fx                    # the website, 53 checks
 node tests/e2e.js /tmp/fx                         # the Claude version, 122 checks
 ```
 
 `site.e2e.js` serves the website the way GitHub Pages does. It replaces Instagram with a stand-in embed that reports its height like the real one. It checks:
 
-- **Import:** importing a ZIP turns collections into folders.
+- **Import:** importing a ZIP brings in your collections, including the newer layout where collection headers link to the Saved collection and deleted posts have no link. Re-importing over a wrong earlier import removes the creator-named collections it made and keeps what you sorted.
 - **Sorting:** filing, skip, Don't need, undo, new folders while sorting, and filing a creator's other posts.
-- **Folders:** previewing a post, moving it, renaming and deleting folders.
+- **Collections:** previewing a post, moving it, renaming and removing collections, and the New and Added here labels.
 - **Menu:** pasted links, backup and restore (including backups from the Claude version) and erase.
 - **App link:** the Instagram app link on Android.
 - **Layout:** the folder buttons stay on screen, with no sideways scrolling on Android, iPhone and desktop.
