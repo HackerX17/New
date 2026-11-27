@@ -1689,6 +1689,7 @@ function setImp(v) {
   UI.imp = v; refreshImp();
   const el = $('#impres'); if (el && v && v.status !== 'reading-step') try { el.scrollIntoView({block: 'nearest', behavior: reduced() ? 'auto' : 'smooth'}); } catch (e) { /* old browsers */ }
 }
+/* ZIP-START */
 async function sniffFile(f) {
   const h = new Uint8Array(await f.slice(0, 4).arrayBuffer());
   if (h[0] === 0x50 && h[1] === 0x4b && (h[2] === 3 || h[2] === 5 || h[2] === 7)) return 'zip';
@@ -1736,6 +1737,7 @@ async function zipEntries(file) {
   }
   return list;
 }
+/* ZIP-END */
 function loadJSZip() {
   if (window.JSZip) return Promise.resolve(window.JSZip);
   return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'; sc.onload = () => window.JSZip ? res(window.JSZip) : rej(new Error('zip-lib')); sc.onerror = () => rej(new Error('zip-lib')); document.head.appendChild(sc); });

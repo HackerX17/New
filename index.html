@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Savepoint</title>
+<meta name="description" content="Sort your Instagram saves into folders, one post at a time.">
+<meta name="theme-color" content="#0b0720">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Audiowide&family=Jost:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: slim top bar; the post fills the screen; folder buttons live in a panel fixed to the bottom
+   so you can always tap one. Two places only: Sort and Folders. Night Arcade colors, calmer type. */
+:root{
+  color-scheme:dark;
+  --bg:#0b0720;--panel:#150e33;--panel2:#20174a;--line:#352b6c;--ink:#fbf6ff;--muted:#c6bde8;--dim:#a197cc;
+  --a1:#00e5ff;--on-a1:#04021a;--a2:#ff3dd8;--ok:#7dff3a;--bad:#ff7a88;--gold:#ffd23f;
+  --b1:#338ced;--b2:#e76624;--b3:#00a888;--b4:#d28e05;--b5:#e24d8b;--b6:#0aac23;--b7:#9887ef;--b8:#eb6263;
+  --logo:"Audiowide","Arial Black",system-ui,sans-serif;--body:"Jost","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --r:14px;--panelh:0px;
+}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 var(--body);-webkit-font-smoothing:antialiased;overflow-x:clip;padding-bottom:calc(var(--panelh) + 12px)}
+a{color:var(--a1)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--a1);outline-offset:2px}
+h1,h2,h3{margin:0;line-height:1.15;font-weight:700;text-wrap:balance}
+h1{font-size:clamp(26px,6vw,34px)}h2{font-size:21px}h3{font-size:18px}
+p{margin:0}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.mut{color:var(--muted)}.dim{color:var(--dim)}.small{font-size:15px}.xs{font-size:13.5px}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:var(--r);background:var(--a1);color:var(--on-a1);font-weight:600;text-decoration:none;white-space:nowrap;position:relative;border:1px solid transparent}
+.btn.ghost{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.btn.sm{min-height:40px;padding:0 13px;font-size:15px}
+.btn.danger{background:var(--bad);color:#1c0306}
+.btn.wide{width:100%}
+.btn input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.btn:focus-within{outline:2px solid var(--a1);outline-offset:2px}
+.field{width:100%;min-height:48px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:16px;color:var(--ink)}
+.field::placeholder{color:var(--dim)}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 90%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.top .wrap{display:flex;align-items:center;gap:10px;min-height:58px}
+.logo{flex:none;display:flex;align-items:center;gap:8px;font:400 17px var(--logo);letter-spacing:.04em;color:var(--ink);text-decoration:none;text-transform:uppercase}
+.logo svg{width:30px;height:30px;flex:none}
+.left{font-size:14px;color:var(--muted);white-space:nowrap}
+.left b{color:var(--ink);font-weight:600}
+.spacer{flex:1}
+.tabs{display:inline-flex;padding:3px;border-radius:12px;border:1px solid var(--line);background:var(--panel)}
+.tabs a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-radius:9px;color:var(--muted);text-decoration:none;font-size:15px;font-weight:500}
+.tabs a[aria-current=page]{background:var(--panel2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.menubtn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center}
+@media(max-width:520px){.logo span{display:none}}
+
+main{display:grid;gap:16px;padding-block:14px 8px}
+
+/* sort: the post */
+.who{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.who a{font-weight:600;font-size:18px;color:var(--ink);text-decoration:none;overflow-wrap:anywhere}
+.frame{position:relative;width:100%;max-width:540px;margin:0 auto;border-radius:var(--r);overflow:hidden;background:#fff;min-height:200px}
+.frame iframe{display:block;width:100%;border:0;background:#fff;height:calc(min(100vw - 32px, 540px) * 1.25 + 210px)}
+.frame .wait{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:10px;background:var(--panel);color:var(--muted);text-align:center;padding:20px;pointer-events:none}
+.frame.ready .wait{display:none}
+.spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--a1);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hint{font-size:14px;color:var(--dim)}
+.note{padding:10px 14px;border-radius:12px;background:var(--panel2);font-size:15px}
+
+/* the panel fixed to the bottom */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:40;background:color-mix(in srgb,var(--panel) 96%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);box-shadow:0 -12px 30px rgba(0,0,0,.35);padding-bottom:env(safe-area-inset-bottom,0px)}
+.dock .wrap{display:grid;gap:10px;padding-block:10px 12px}
+.dock-label{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr));gap:8px;max-height:34vh;overflow-y:auto;overscroll-behavior:contain}
+.fbtn{display:flex;align-items:center;gap:9px;min-height:50px;padding:6px 12px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);text-align:left;font-weight:600;font-size:16px}
+.fbtn:active{transform:scale(.97)}
+.fbtn .dot{width:12px;height:12px;border-radius:4px;background:var(--c);flex:none}
+.fbtn .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbtn .ct{font-size:13px;font-weight:500;color:var(--dim)}
+.fbtn.add{border-style:dashed;color:var(--muted);font-weight:500}
+.actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.act{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;border-radius:12px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;background:transparent;border:1px solid transparent}
+.act:hover,.act:active{background:var(--panel2)}
+.act[aria-disabled=true],.act:disabled{opacity:.4;pointer-events:none}
+.act .i{width:22px;height:22px;color:var(--ink)}
+.act.ig .i{color:var(--a2)}
+.batch{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--a1) 12%,var(--panel2));font-size:15px}
+.batch p{flex:1 1 180px}
+.newf{display:flex;gap:8px}
+.newf .field{min-height:46px}
+.flash{animation:flash .5s}
+@keyframes flash{30%{box-shadow:0 0 0 3px var(--c);transform:scale(1.03)}}
+
+/* folders */
+.list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.frow{display:flex;align-items:center;gap:12px;min-height:58px;padding:8px 14px;border-radius:var(--r);background:var(--panel);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-weight:600}
+.frow .dot{width:14px;height:14px;border-radius:4px;background:var(--c);flex:none}
+.frow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow .ct{color:var(--dim);font-weight:500;font-size:15px}
+.sep{margin-top:8px}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:15px;min-height:40px}
+.head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.prow{border-radius:var(--r);background:var(--panel);border:1px solid var(--line);overflow:hidden}
+.prow>button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;width:100%;padding:12px 14px;text-align:left;min-height:58px}
+.prow .c1{font-weight:600;overflow-wrap:anywhere}
+.prow .c2{grid-column:1;font-size:14px;color:var(--dim)}
+.prow .c3{grid-column:1/-1;font-size:14px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.prow .chev{grid-row:1/3;grid-column:2;align-self:center;color:var(--dim)}
+.prow[open]>button .chev{transform:rotate(180deg)}
+.pbody{display:grid;gap:10px;padding:0 12px 14px}
+.pacts{display:flex;flex-wrap:wrap;gap:8px}
+.pacts select{width:auto;min-height:40px;padding:6px 10px}
+
+/* start + sheet */
+.hero{display:grid;gap:14px;padding-block:12px}
+.hero h1{font-size:clamp(30px,8vw,42px)}
+.steps{margin:0;padding-left:1.3em;display:grid;gap:6px;color:var(--muted)}
+.steps b{color:var(--ink)}
+details.how summary{cursor:pointer;color:var(--a1);min-height:44px;display:flex;align-items:center}
+.status{padding:12px 14px;border-radius:12px;background:var(--panel2)}
+.err{padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--bad) 15%,transparent);border:1px solid color-mix(in srgb,var(--bad) 45%,transparent)}
+.scrim{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:51;max-height:88vh;overflow-y:auto;background:var(--panel);border-top:1px solid var(--line);border-radius:20px 20px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet .wrap{display:grid;gap:18px;padding-block:16px 22px}
+.sheet section{display:grid;gap:10px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--panelh) + env(safe-area-inset-bottom,0px) + 12px);z-index:60;width:min(440px,calc(100% - 32px));display:grid;pointer-events:none}
+.toast{padding:10px 14px;border-radius:12px;background:var(--ink);color:var(--bg);font-weight:600;font-size:15px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.toast:not(:last-child){display:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="#sort"><svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="10" style="fill:var(--panel2)"/><path d="M11 7.5h12v19l-6-4.4-6 4.4z" style="fill:none;stroke:var(--a1);stroke-width:2.6;stroke-linejoin:round"/></svg><span>Savepoint</span></a>
+  <span class="left" id="left" aria-live="polite"></span>
+  <span class="spacer"></span>
+  <nav class="tabs" id="tabs" aria-label="Main"><a href="#sort" id="tab-sort">Sort</a><a href="#folders" id="tab-folders">Folders</a></nav>
+  <button class="menubtn" id="menubtn" data-act="menu" aria-label="Menu: add saves, backup, settings"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+</div></header>
+<main id="main" class="wrap"></main>
+<div class="dock" id="dock" hidden><div class="wrap" id="dockin"></div></div>
+<div id="sheet" hidden></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+/* Copied from savepoint/app.html by scripts/build.sh. Edit it there. */
+/* =============== Instagram export parser (PARSER-START) =============== */
+const POST_RE = /instagram\.com\/(?:[A-Za-z0-9._]+\/)?(p|reels?|tv)\/([A-Za-z0-9_-]{5,})/i;
+const USER_RE = /^[A-Za-z0-9._]{1,30}$/;
+const NOT_USERS = new Set(['p','reel','reels','tv','stories','explore','accounts','_u','collection']);
+function fixText(s) {
+  if (typeof s !== 'string') return '';
+  if (!/[\u0080-ÿ]/.test(s) || /[^\u0000-ÿ]/.test(s)) return s;
+  try { return new TextDecoder('utf-8', {fatal: true}).decode(Uint8Array.from(s, c => c.charCodeAt(0))); } catch (e) { return s; }
+}
+const normTs = t => (typeof t === 'number' && t > 0) ? (t > 1e12 ? Math.round(t / 1000) : Math.round(t)) : 0;
+function entriesOf(j) {
+  if (Array.isArray(j)) return j;
+  if (j && typeof j === 'object') for (const v of Object.values(j)) if (Array.isArray(v)) return v;
+  return [];
+}
+function scan(node) {
+  const o = {urls: [], ts: [], names: [], labels: {}, caption: ''};
+  const walk = (x, k) => {
+    if (x == null) return;
+    if (typeof x === 'string') { if (/^https?:\/\//i.test(x)) o.urls.push(x); else if (k === 'value' || k === 'title' || k === 'name') o.names.push({k, v: x}); return; }
+    if (typeof x === 'number') { if (/time|date/i.test(k)) o.ts.push(x); return; }
+    if (Array.isArray(x)) { for (const y of x) walk(y, k); return; }
+    if (typeof x === 'object') {
+      if (typeof x.label === 'string' && 'value' in x) {
+        const lb = x.label.toLowerCase();
+        if (/caption|description/.test(lb)) { if (typeof x.value === 'string' && !o.caption) o.caption = x.value; return; }
+        o.labels[lb] = x.value;
+      }
+      for (const [kk, v] of Object.entries(x)) {
+        if (/caption|description/i.test(kk)) { const c = typeof v === 'string' ? v : (v && typeof v.value === 'string' ? v.value : ''); if (c && !o.caption) o.caption = c; continue; }
+        walk(v, kk);
+      }
+    }
+  };
+  walk(node, '');
+  return o;
+}
+const capOf = sc => fixText(sc.caption || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+function postFrom(url) { const m = String(url).match(POST_RE); return m ? {id: m[2], type: /^(reels?|tv)$/i.test(m[1]) ? 'reel' : 'post'} : null; }
+function userFromUrl(url) {
+  const m = String(url).match(/instagram\.com\/(?:_u\/)?([A-Za-z0-9._]{1,30})\/?(?:[?#]|$)/i);
+  return m && !NOT_USERS.has(m[1].toLowerCase()) ? m[1] : '';
+}
+function cleanUser(c) { const s = String(c == null ? '' : c).trim().replace(/^@/, ''); return USER_RE.test(s) && !/^\d+$/.test(s) && !NOT_USERS.has(s.toLowerCase()) ? s.toLowerCase() : ''; }
+function authorOf(entry, sc, url, skipTitle) {
+  const cands = [];
+  if (!skipTitle && entry && typeof entry.title === 'string') cands.push(entry.title);
+  for (const k of ['username', 'author', 'owner', 'account', 'user']) if (typeof sc.labels[k] === 'string') cands.push(sc.labels[k]);
+  for (const n of sc.names) if (!(skipTitle && n.k === 'title')) cands.push(n.v);
+  const m = String(url || '').match(/instagram\.com\/([A-Za-z0-9._]{1,30})\/(?:p|reels?|tv)\//i);
+  if (m) cands.push(m[1]);
+  for (const c of cands) { const u = cleanUser(c); if (u) return u; }
+  return '';
+}
+function parseSaved(j) {
+  const out = [];
+  for (const e of entriesOf(j)) {
+    const sc = scan(e); const url = sc.urls.find(u => POST_RE.test(u)); if (!url) continue;
+    out.push({...postFrom(url), author: authorOf(e, sc, url), ts: normTs(sc.ts[0]), cap: capOf(sc)});
+  }
+  return out;
+}
+function postEntries(e) {
+  const res = [];
+  const walk = (x, owner) => {
+    if (x == null) return;
+    if (typeof x === 'string') { if (POST_RE.test(x)) res.push({url: x, entry: owner}); return; }
+    if (Array.isArray(x)) { for (const y of x) walk(y, (owner === e && y && typeof y === 'object' && !Array.isArray(y)) ? y : owner); return; }
+    if (typeof x === 'object') for (const v of Object.values(x)) walk(v, owner);
+  };
+  walk(e, e);
+  return res;
+}
+function headerName(e) {
+  if (!e || typeof e !== 'object') return '';
+  const smd = e.string_map_data;
+  if (smd) { const nm = smd.Name || smd.name || smd['Collection name']; if (nm && typeof nm.value === 'string' && !nm.href) return fixText(nm.value).trim(); }
+  if (typeof e.title === 'string' && e.title.trim() && !/^collections?$/i.test(e.title.trim())) return fixText(e.title).trim();
+  const sc = scan(e);
+  for (const k of ['collection name', 'collection', 'name']) if (typeof sc.labels[k] === 'string') return fixText(sc.labels[k]).trim();
+  return '';
+}
+function colItem(e, url, col, skipTitle = true) {
+  const p = postFrom(url); if (!p) return null;
+  const sc = scan(e || {});
+  const smd = e && e.string_map_data; const nm = smd && (smd.Name || smd.name);
+  let author = nm && nm.href && cleanUser(nm.value) || '';
+  if (!author) author = authorOf(e, sc, url, skipTitle);
+  return {...p, author, ts: normTs(sc.ts[0]), col, cap: capOf(sc)};
+}
+function parseCollections(j) {
+  const out = []; let cur = '';
+  for (const e of entriesOf(j)) {
+    const posts = postEntries(e);
+    if (!posts.length) { const h = headerName(e); if (h) cur = h; continue; }
+    if (posts.length === 1) out.push(colItem(e, posts[0].url, cur));
+    else { const h = headerName(e) || cur; for (const p of posts) out.push(colItem(p.entry === e ? {} : p.entry, p.url, h, false)); }
+  }
+  return out.filter(x => x && x.col);
+}
+function parseLiked(j) {
+  const out = [];
+  for (const e of entriesOf(j)) { const sc = scan(e); const url = sc.urls.find(u => POST_RE.test(u)) || ''; out.push({author: authorOf(e, sc, url), ts: normTs(sc.ts[0])}); }
+  return out;
+}
+function parsePeople(j) {
+  const out = new Map();
+  for (const e of entriesOf(j)) {
+    const sc = scan(e); const cands = [];
+    if (e && typeof e.title === 'string') cands.push(e.title);
+    for (const n of sc.names) cands.push(n.v);
+    for (const url of sc.urls) cands.push(userFromUrl(url));
+    let u = ''; for (const c of cands) { u = cleanUser(c); if (u) break; }
+    if (u && !out.has(u)) out.set(u, normTs(sc.ts[0]));
+  }
+  return [...out].map(([u, ts]) => ({u, ts}));
+}
+function kindOf(path) {
+  const p = String(path).toLowerCase().split('/').pop();
+  if (p.endsWith('.html')) return /^(saved_posts|saved_collections|liked_posts|followers|following)/.test(p) ? 'html' : '';
+  if (!p.endsWith('.json')) return '';
+  if (p.startsWith('saved_posts')) return 'saved';
+  if (p.startsWith('saved_collections')) return 'cols';
+  if (p.startsWith('liked_posts')) return 'liked';
+  if (/^followers(_\d+)?\.json$/.test(p)) return 'followers';
+  if (/^following(_\d+)?\.json$/.test(p)) return 'following';
+  if (p.includes('recently_unfollowed')) return 'unfollowed';
+  if (p.startsWith('close_friends')) return 'close';
+  return '';
+}
+function sniff(j) {
+  if (Array.isArray(j)) return j.length && j[0] && j[0].string_list_data ? 'followers' : '';
+  if (!j || typeof j !== 'object') return '';
+  const k = Object.keys(j).join(' ');
+  if (/saved_saved_media/.test(k)) return 'saved';
+  if (/saved_saved_collections/.test(k)) return 'cols';
+  if (/likes_media_likes/.test(k)) return 'liked';
+  if (/relationships_following/.test(k)) return 'following';
+  if (/relationships_followers/.test(k)) return 'followers';
+  if (/unfollowed/.test(k)) return 'unfollowed';
+  if (/close_friends/.test(k)) return 'close';
+  return '';
+}
+function newImport() { return {saved: [], cols: [], liked: [], followers: null, following: null, unfollowed: null, close: null, html: 0, files: 0}; }
+function addParsed(res, kind, j) {
+  res.files++;
+  if (kind === 'saved') res.saved.push(...parseSaved(j));
+  else if (kind === 'cols') res.cols.push(...parseCollections(j));
+  else if (kind === 'liked') res.liked.push(...parseLiked(j));
+  else { const list = parsePeople(j); res[kind] = (res[kind] || []).concat(list); }
+}
+/* (PARSER-END) */
+/* ZIP-START */
+async function sniffFile(f) {
+  const h = new Uint8Array(await f.slice(0, 4).arrayBuffer());
+  if (h[0] === 0x50 && h[1] === 0x4b && (h[2] === 3 || h[2] === 5 || h[2] === 7)) return 'zip';
+  const t = (await f.slice(0, 1024).text()).replace(/^﻿/, '').trimStart();
+  if (t[0] === '{' || t[0] === '[') return 'json';
+  if (t[0] === '<') return 'html';
+  return '';
+}
+const rawInflate = (() => { try { new DecompressionStream('deflate-raw'); return true; } catch (e) { return false; } })();
+// Reads only the ZIP's directory and the few files Savepoint needs, so even a multi-gigabyte export with photos opens on a phone.
+async function zipEntries(file) {
+  const size = file.size, tailLen = Math.min(size, 65557 + 20);
+  const tail = new DataView(await file.slice(size - tailLen).arrayBuffer());
+  let eo = -1; for (let i = tail.byteLength - 22; i >= 0; i--) if (tail.getUint32(i, true) === 0x06054b50) { eo = i; break; }
+  if (eo < 0) throw new Error('notzip');
+  let count = tail.getUint16(eo + 10, true), cdSize = tail.getUint32(eo + 12, true), cdOff = tail.getUint32(eo + 16, true);
+  if (count === 0xffff || cdSize === 0xffffffff || cdOff === 0xffffffff) {
+    const lp = eo - 20;
+    if (lp >= 0 && tail.getUint32(lp, true) === 0x07064b50) {
+      const zo = Number(tail.getBigUint64(lp + 8, true)); const z = new DataView(await file.slice(zo, zo + 56).arrayBuffer());
+      if (z.getUint32(0, true) === 0x06064b50) { count = Number(z.getBigUint64(32, true)); cdSize = Number(z.getBigUint64(40, true)); cdOff = Number(z.getBigUint64(48, true)); }
+    }
+  }
+  const cd = new DataView(await file.slice(cdOff, cdOff + cdSize).arrayBuffer()); const td = new TextDecoder();
+  const list = []; let p = 0;
+  for (let n = 0; n < count && p + 46 <= cd.byteLength; n++) {
+    if (cd.getUint32(p, true) !== 0x02014b50) break;
+    const method = cd.getUint16(p + 10, true); let csize = cd.getUint32(p + 20, true), usize = cd.getUint32(p + 24, true);
+    const nl = cd.getUint16(p + 28, true), xl = cd.getUint16(p + 30, true), cl = cd.getUint16(p + 32, true); let lho = cd.getUint32(p + 42, true);
+    const name = td.decode(new Uint8Array(cd.buffer, cd.byteOffset + p + 46, nl));
+    if (csize === 0xffffffff || usize === 0xffffffff || lho === 0xffffffff) {
+      let q = p + 46 + nl; const end = q + xl;
+      while (q + 4 <= end) { const id = cd.getUint16(q, true), sz = cd.getUint16(q + 2, true); if (id === 1) { let r = q + 4; if (usize === 0xffffffff) { usize = Number(cd.getBigUint64(r, true)); r += 8; } if (csize === 0xffffffff) { csize = Number(cd.getBigUint64(r, true)); r += 8; } if (lho === 0xffffffff) lho = Number(cd.getBigUint64(r, true)); break; } q += 4 + sz; }
+    }
+    p += 46 + nl + xl + cl;
+    if (name.endsWith('/')) continue;
+    list.push({name, text: async () => {
+      const lh = new DataView(await file.slice(lho, lho + 30).arrayBuffer());
+      if (lh.getUint32(0, true) !== 0x04034b50) throw new Error('bad entry');
+      const start = lho + 30 + lh.getUint16(26, true) + lh.getUint16(28, true); const blob = file.slice(start, start + csize);
+      if (method === 0) return blob.text();
+      if (method === 8) return new Response(blob.stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+      throw new Error('unsupported');
+    }});
+  }
+  return list;
+}
+/* ZIP-END */
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const fmtN = n => Number(n || 0).toLocaleString();
+const plural = (n, one, many = one + 's') => `${fmtN(n)} ${n === 1 ? one : many}`;
+const nowS = () => Math.floor(Date.now() / 1000);
+const fmtD = ts => ts ? new Date(ts * 1000).toLocaleDateString(undefined, {day: 'numeric', month: 'short', year: 'numeric'}) : '';
+const rid = () => Math.random().toString(36).slice(2, 9);
+const ANDROID = /Android/i.test(navigator.userAgent);
+const ICON = {
+  skip: '<path d="m5 5 9 7-9 7zM18 5v14"/>',
+  trash: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
+  ig: '<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" style="fill:currentColor;stroke:none"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  left: '<path d="m15 5-7 7 7 7"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
+  upload: '<path d="M12 20V8m-5 5 5-5 5 5M4.5 4h15"/>',
+};
+const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n] || ''}</svg>`;
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; $('#toasts').appendChild(t);
+  while ($('#toasts').children.length > 3) $('#toasts').firstChild.remove();
+  setTimeout(() => t.remove(), 2800);
+}
+
+/* ---------- data: saved in this browser ---------- */
+// item: {a: creator, t: 'r'|'p', s: saved-at seconds, cp: caption, n: note, c: [instagram collections], f: folder id or '', x: 1 = don't need, at: filed-at}
+const KEY = 'savepoint-web-v1';
+const D = (() => {
+  try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j && j.v === 1) return {items: new Map(Object.entries(j.items || {})), folders: j.folders || [], order: j.order || 'new'}; } catch (e) { /* start fresh */ }
+  return {items: new Map(), folders: [], order: 'new'};
+})();
+let saveT = 0, storageOK = true;
+function saveNow() {
+  clearTimeout(saveT);
+  try { localStorage.setItem(KEY, JSON.stringify({v: 1, items: Object.fromEntries(D.items), folders: D.folders, order: D.order})); storageOK = true; }
+  catch (e) { if (storageOK) toast('This browser is out of space for Savepoint. Download a backup from the menu.'); storageOK = false; }
+}
+const save = () => { clearTimeout(saveT); saveT = setTimeout(saveNow, 250); };
+addEventListener('pagehide', saveNow);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* optional */ }
+
+const folderById = id => D.folders.find(f => f.id === id) || null;
+const isUnsorted = it => it && !it.f && !it.x;
+const unsortedIds = () => [...D.items].filter(([, it]) => isUnsorted(it)).map(([id]) => id);
+const countIn = fid => { let n = 0; for (const it of D.items.values()) if (it.f === fid && !it.x) n++; return n; };
+function addFolder(name) {
+  name = String(name || '').trim().slice(0, 40); if (!name) return null;
+  const ex = D.folders.find(f => f.name.toLowerCase() === name.toLowerCase()); if (ex) return ex;
+  const f = {id: 'f' + rid(), name, c: (D.folders.length % 8) + 1}; D.folders.push(f); save(); return f;
+}
+const postPath = (id, it) => `www.instagram.com/${it.t === 'r' ? 'reel' : 'p'}/${id}/`;
+const embedSrc = (id, it) => `https://${postPath(id, it)}embed/captioned/`;
+const appLink = path => ANDROID ? `intent://${path}#Intent;scheme=https;package=com.instagram.android;S.browser_fallback_url=${encodeURIComponent('https://' + path)};end` : 'https://' + path;
+
+/* ---------- Instagram previews: size each frame to its post ---------- */
+addEventListener('message', e => {
+  if (!/^https:\/\/www\.instagram\.com$/.test(e.origin)) return;
+  const fr = $$('iframe[data-id]').find(f => f.contentWindow === e.source); if (!fr) return;
+  let d = e.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (er) { d = null; } }
+  const host = fr.closest('.frame'); if (host && !fr.hidden) host.classList.add('ready');
+  fr.dataset.ok = '1';
+  if (d && d.type === 'MEASURE' && d.details && +d.details.height > 120) fr.style.height = Math.ceil(+d.details.height) + 'px';
+});
+function makeFrame(id, it) {
+  const fr = document.createElement('iframe');
+  fr.dataset.id = id; fr.src = embedSrc(id, it); fr.title = `Instagram post by @${it.a || 'unknown'}`;
+  fr.setAttribute('allowtransparency', 'true'); fr.setAttribute('allow', 'encrypted-media; fullscreen; clipboard-write'); fr.setAttribute('scrolling', 'no');
+  fr.addEventListener('load', () => { fr.dataset.ok = '1'; const h = fr.closest('.frame'); if (h && !fr.hidden) h.classList.add('ready'); });
+  return fr;
+}
+
+/* ---------- sorting queue ---------- */
+let Q = null; const UNDO = [];
+let batch = null;
+function buildQueue() {
+  const ids = unsortedIds(); const items = ids.map(id => [id, D.items.get(id)]);
+  if (D.order === 'old') items.sort((a, b) => (a[1].s || 0) - (b[1].s || 0));
+  else if (D.order === 'creator') { const c = new Map(); for (const [, it] of items) c.set(it.a, (c.get(it.a) || 0) + 1); items.sort((a, b) => (c.get(b[1].a) - c.get(a[1].a)) || String(a[1].a).localeCompare(String(b[1].a)) || (b[1].s || 0) - (a[1].s || 0)); }
+  else items.sort((a, b) => (b[1].s || 0) - (a[1].s || 0));
+  Q = items.map(([id]) => id);
+}
+function cur() { if (!Q) buildQueue(); while (Q.length && !isUnsorted(D.items.get(Q[0]))) Q.shift(); if (!Q.length) { buildQueue(); } return Q[0] || null; }
+function nextAfter() { for (let i = 1; i < Q.length; i++) if (isUnsorted(D.items.get(Q[i]))) return Q[i]; return null; }
+function fileTo(fid, btn) {
+  const id = cur(); const f = folderById(fid); if (!id || !f) return;
+  const it = D.items.get(id); UNDO.push({id, f: it.f, x: it.x, at: it.at}); if (UNDO.length > 100) UNDO.shift();
+  it.f = fid; it.at = nowS(); Q.shift(); save();
+  const more = it.a ? unsortedIds().filter(x => D.items.get(x).a === it.a).length : 0;
+  batch = more ? {a: it.a, fid} : null;
+  if (btn) { btn.classList.remove('flash'); void btn.offsetWidth; btn.classList.add('flash'); }
+  toast(`Put in ${f.name}`); render();
+}
+function dontNeed() { const id = cur(); if (!id) return; const it = D.items.get(id); UNDO.push({id, f: it.f, x: it.x, at: it.at}); it.x = 1; Q.shift(); batch = null; save(); toast('Moved to Don’t need'); render(); }
+function skip() { const id = cur(); if (!id) return; Q.push(Q.shift()); batch = null; render(); }
+function undo() { const u = UNDO.pop(); if (!u) return; const it = D.items.get(u.id); if (!it) return; it.f = u.f; it.x = u.x; it.at = u.at; const k = Q.indexOf(u.id); if (k >= 0) Q.splice(k, 1); Q.unshift(u.id); batch = null; save(); toast('Undone'); render(); }
+function batchFile() {
+  if (!batch) return; const f = folderById(batch.fid); if (!f) return;
+  const ids = unsortedIds().filter(x => D.items.get(x).a === batch.a);
+  for (const x of ids) { const it = D.items.get(x); it.f = batch.fid; it.at = nowS(); }
+  toast(`Put ${plural(ids.length, 'more post')} from @${batch.a} in ${f.name}`); batch = null; save(); render();
+}
+
+/* ---------- views ---------- */
+const main = $('#main');
+let view = '', newFolderOpen = false, openRow = null, shown = 50;
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  const v = !D.items.size ? 'start' : h === 'folders' ? 'folders' : h.startsWith('f-') ? 'folder' : 'sort';
+  if (v !== view || v === 'folder') { openRow = null; shown = 50; }
+  view = v; render(true);
+}
+addEventListener('hashchange', route);
+// Change screens one way only: let the hashchange event redraw, or redraw now if the address is already there.
+function go(h) { if (location.hash.replace(/^#/, '') === h) route(); else location.hash = h; }
+function render(scrollTop) {
+  const un = unsortedIds().length;
+  $('#left').innerHTML = D.items.size ? `<b>${fmtN(un)}</b> left` : '';
+  $('#tabs').hidden = !D.items.size;
+  $('#tab-sort').toggleAttribute('aria-current', view === 'sort'); if (view === 'sort') $('#tab-sort').setAttribute('aria-current', 'page');
+  $('#tab-folders').toggleAttribute('aria-current', view === 'folders' || view === 'folder'); if (view === 'folders' || view === 'folder') $('#tab-folders').setAttribute('aria-current', 'page');
+  if (view === 'start') vStart(); else if (view === 'folders') vFolders(); else if (view === 'folder') vFolder(); else vSort(scrollTop);
+  if (scrollTop) scrollTo(0, 0);
+}
+
+function vStart() {
+  $('#dock').hidden = true;
+  main.innerHTML = `<section class="hero">
+<h1>Sort your Instagram saves</h1>
+<p class="mut">See each saved post, tap a folder, and the next one appears. Nothing changes on Instagram.</p>
+<label class="btn wide">${ic('upload')}Choose your Instagram ZIP<input type="file" id="pick" multiple aria-label="Choose your Instagram download"></label>
+<div id="status"></div>
+<details class="how"><summary>How to get your Instagram download</summary><ol class="steps">
+<li>In Instagram, open your profile, tap the three lines, then <b>Meta Account</b> (older versions: Accounts Center).</li>
+<li><b>Your information and permissions</b>, then <b>Export your information</b>, then <b>Create export</b>.</li>
+<li>Pick your profile, then <b>Export to device</b>.</li>
+<li><b>Customize information</b>: clear everything, then tick only <b>Saved</b>.</li>
+<li><b>Date range</b>: All time. <b>Format</b>: JSON. Then <b>Start export</b>.</li>
+<li>When Instagram says it’s ready, go back to <b>Export your information</b>, tap <b>Download</b>, then choose that ZIP above.</li></ol></details>
+<p class="xs dim">Your saves stay in this browser on this phone. Download a backup from the menu now and then.</p>
+</section>`;
+}
+
+function vSort(scrollTop) {
+  const id = cur();
+  if (!id) {
+    $('#dock').hidden = true;
+    main.innerHTML = `<section class="hero"><h1>All sorted</h1><p class="mut">Every save is in a folder or in Don’t need.</p><div class="row"><a class="btn" href="#folders">See your folders</a><button class="btn ghost" data-act="menu">Add more saves</button></div></section>`;
+    return;
+  }
+  const it = D.items.get(id), nx = nextAfter();
+  if (!$('#post', main)) main.innerHTML = `<section class="post" id="post" style="display:grid;gap:10px"><div class="who" id="who"></div><div class="frame" id="frame"><div class="wait"><div class="spin"></div><span>Loading the post from Instagram…</span></div></div><p class="hint" id="hint"></p></section>`;
+  $('#who').innerHTML = `${it.a ? `<a href="${esc(appLink('www.instagram.com/' + encodeURIComponent(it.a) + '/'))}">@${esc(it.a)}</a>` : '<span style="font-weight:600">Unknown creator</span>'}<span class="dim small">${it.t === 'r' ? 'Reel' : 'Post'}${it.s ? ' · saved ' + fmtD(it.s) : ''}</span>`;
+  $('#hint').innerHTML = `Blank, or says the post is unavailable? It’s private or deleted. Tap <b>Instagram</b> below to try the app, or <b>Don’t need</b>.${it.n ? `<br><span class="note" style="display:inline-block;margin-top:8px">Your note: ${esc(it.n)}</span>` : ''}`;
+  const frame = $('#frame');
+  for (const fr of $$('iframe', frame)) if (fr.dataset.id !== id && fr.dataset.id !== nx) fr.remove();
+  let fc = $(`iframe[data-id="${CSS.escape(id)}"]`, frame); if (!fc) { fc = makeFrame(id, it); frame.appendChild(fc); }
+  fc.hidden = false; frame.classList.toggle('ready', fc.dataset.ok === '1');
+  if (nx && nx !== id) { let fn = $(`iframe[data-id="${CSS.escape(nx)}"]`, frame); if (!fn) { fn = makeFrame(nx, D.items.get(nx)); fn.hidden = true; frame.appendChild(fn); } fn.hidden = true; }
+  renderDock(id, it);
+  if (!scrollTop) scrollTo({top: 0, behavior: 'auto'});
+}
+function renderDock(id, it) {
+  const d = $('#dockin'); $('#dock').hidden = false;
+  const bf = batch && folderById(batch.fid), bn = batch ? unsortedIds().filter(x => D.items.get(x).a === batch.a).length : 0;
+  d.innerHTML = `${bf && bn ? `<div class="batch"><p>${plural(bn, 'more post')} from @${esc(batch.a)}. Put ${bn === 1 ? 'it' : 'them all'} in ${esc(bf.name)} too?</p><button class="btn sm" data-act="batch">Yes, put ${bn === 1 ? 'it' : 'all'} in ${esc(bf.name)}</button></div>` : ''}
+<p class="dock-label">Put it in a folder</p>
+<div class="folders">${D.folders.map(f => `<button class="fbtn" style="--c:var(--b${f.c})" data-act="file" data-f="${f.id}"><span class="dot"></span><span class="nm">${esc(f.name)}</span><span class="ct">${countIn(f.id)}</span></button>`).join('')}
+${newFolderOpen ? `<form class="newf" id="newf" style="grid-column:1/-1"><label class="sr" for="nf">New folder name</label><input id="nf" class="field" maxlength="40" placeholder="New folder name" autocomplete="off" required><button class="btn sm">Add and put it there</button></form>` : `<button class="fbtn add" data-act="newfolder">${ic('plus')}<span class="nm">New folder</span></button>`}</div>
+<div class="actions"><button class="act" data-act="skip">${ic('skip')}Skip</button><button class="act" data-act="dontneed">${ic('trash')}Don’t need</button><button class="act" data-act="undo" ${UNDO.length ? '' : 'disabled'}>${ic('undo')}Undo</button><a class="act ig" href="${esc(appLink(postPath(id, it)))}">${ic('ig')}Instagram</a></div>`;
+  if (newFolderOpen) setTimeout(() => { const i = $('#nf'); if (i) i.focus(); }, 20);
+  sizeDock();
+}
+function sizeDock() { const h = $('#dock').hidden ? 0 : $('#dock').offsetHeight; document.documentElement.style.setProperty('--panelh', h + 'px'); }
+addEventListener('resize', sizeDock);
+
+function vFolders() {
+  $('#dock').hidden = true; sizeDock();
+  const un = unsortedIds().length, dn = [...D.items.values()].filter(i => i.x).length;
+  main.innerHTML = `<div class="head"><h1>Folders</h1><button class="btn sm ghost" data-act="newfolder2">${ic('plus')}New folder</button></div>
+${newFolderOpen ? `<form class="newf" id="newf2"><label class="sr" for="nf2">New folder name</label><input id="nf2" class="field" maxlength="40" placeholder="New folder name" autocomplete="off" required><button class="btn sm">Add</button></form>` : ''}
+<ul class="list">${D.folders.map(f => `<li><a class="frow" href="#f-${f.id}" style="--c:var(--b${f.c})"><span class="dot"></span><span class="nm">${esc(f.name)}</span><span class="ct">${fmtN(countIn(f.id))}</span></a></li>`).join('') || '<li class="dim">No folders yet. Make one here or while sorting.</li>'}</ul>
+<ul class="list sep"><li><a class="frow" href="#f-unsorted" style="--c:var(--dim)"><span class="dot"></span><span class="nm">Not sorted yet</span><span class="ct">${fmtN(un)}</span></a></li><li><a class="frow" href="#f-dontneed" style="--c:var(--bad)"><span class="dot"></span><span class="nm">Don’t need</span><span class="ct">${fmtN(dn)}</span></a></li></ul>`;
+  if (newFolderOpen) setTimeout(() => { const i = $('#nf2'); if (i) i.focus(); }, 20);
+}
+let folderEdit = false, folderDel = false;
+function vFolder() {
+  $('#dock').hidden = true; sizeDock();
+  const key = decodeURIComponent(location.hash.slice(3));
+  const f = folderById(key), special = key === 'unsorted' ? 'Not sorted yet' : key === 'dontneed' ? 'Don’t need' : '';
+  if (!f && !special) { location.hash = 'folders'; return; }
+  const ids = [...D.items].filter(([, it]) => key === 'unsorted' ? isUnsorted(it) : key === 'dontneed' ? it.x : (it.f === key && !it.x)).sort((a, b) => (b[1].at || b[1].s || 0) - (a[1].at || a[1].s || 0)).map(([id]) => id);
+  const name = f ? f.name : special;
+  main.innerHTML = `<a class="back" href="#folders">${ic('left')}Folders</a>
+${f && folderEdit ? `<form class="newf" id="renamef"><label class="sr" for="rn">Folder name</label><input id="rn" class="field" maxlength="40" value="${esc(f.name)}" required><button class="btn sm">Save</button></form>
+<div class="row">${folderDel ? `<span class="small">Delete “${esc(f.name)}”? Its posts go back to Not sorted yet.</span><button class="btn sm danger" data-act="delf-yes">Delete</button><button class="btn sm ghost" data-act="delf-no">Keep</button>` : `<button class="btn sm ghost" data-act="delf">Delete folder</button><button class="btn sm ghost" data-act="editf-cancel">Cancel</button>`}</div>`
+  : `<div class="head"><h1>${esc(name)}</h1>${f ? `<button class="btn sm ghost" data-act="editf">Rename or delete</button>` : ''}</div>`}
+<p class="small mut">${plural(ids.length, 'post')}. Tap one to see it.</p>
+<ul class="list" id="plist">${ids.slice(0, shown).map(id => prowHTML(id)).join('') || '<li class="dim">Nothing here yet.</li>'}</ul>
+${ids.length > shown ? `<button class="btn ghost wide" data-act="more">Show more</button>` : ''}`;
+  if (openRow) { const r = $(`.prow[data-id="${CSS.escape(openRow)}"]`); if (r) openPreview(r); }
+}
+function prowHTML(id) {
+  const it = D.items.get(id); const isOpen = openRow === id;
+  return `<li class="prow" data-id="${esc(id)}" ${isOpen ? 'open' : ''}><button data-act="row" aria-expanded="${isOpen}"><span class="c1">@${esc(it.a || 'unknown')}</span><span class="c2">${it.t === 'r' ? 'Reel' : 'Post'}${it.s ? ' · saved ' + fmtD(it.s) : ''}</span>${it.n || it.cp ? `<span class="c3">${esc(it.n || it.cp)}</span>` : ''}<span class="chev">${ic('down')}</span></button>${isOpen ? `<div class="pbody"><div class="frame"><div class="wait"><div class="spin"></div><span>Loading…</span></div></div>
+<div class="pacts"><label class="sr" for="mv-${esc(id)}">Move to folder</label><select class="field" id="mv-${esc(id)}" data-move="${esc(id)}"><option value="">Move to…</option>${D.folders.filter(f => f.id !== it.f).map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('')}${it.f || it.x ? '<option value="_none">Not sorted yet</option>' : ''}</select>
+${it.x ? `<button class="btn sm ghost" data-act="restore" data-id="${esc(id)}">Bring back</button>` : `<button class="btn sm ghost" data-act="rowdont" data-id="${esc(id)}">Don’t need</button>`}<a class="btn sm ghost" href="${esc(appLink(postPath(id, it)))}">Open in Instagram</a></div></div>` : ''}</li>`;
+}
+function openPreview(row) {
+  const id = row.dataset.id, it = D.items.get(id), host = $('.frame', row); if (!host || !it) return;
+  const fr = makeFrame(id, it); host.appendChild(fr);
+}
+
+/* ---------- menu sheet ---------- */
+let eraseAsk = false, menuStatus = '';
+function openMenu() { $('#sheet').hidden = false; renderMenu(); setTimeout(() => { const c = $('#closemenu'); if (c) c.focus(); }, 30); }
+function closeMenu() { $('#sheet').hidden = true; $('#sheet').innerHTML = ''; eraseAsk = false; menuStatus = ''; }
+function renderMenu() {
+  $('#sheet').innerHTML = `<div class="scrim" data-act="closemenu"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="menuh"><div class="wrap">
+<div class="head"><h2 id="menuh">Menu</h2><button class="btn sm ghost" id="closemenu" data-act="closemenu">Close</button></div>
+<section><h3>Add more saves</h3><label class="btn ghost wide">${ic('upload')}Choose an Instagram ZIP or a backup<input type="file" id="pick2" multiple aria-label="Choose an Instagram download or a Savepoint backup"></label><div id="status2">${menuStatus}</div>
+<label class="small mut" for="links">Or paste post links (in Instagram: Share, then Copy link)</label><textarea id="links" class="field" rows="3" placeholder="https://www.instagram.com/reel/…"></textarea><button class="btn ghost" data-act="addlinks">Add links</button></section>
+<section><h3>Order to sort in</h3><div class="seg" role="group" aria-label="Order">${[['new', 'Newest first'], ['old', 'Oldest first'], ['creator', 'By creator']].map(([k, l]) => `<button data-act="order" data-v="${k}" aria-pressed="${D.order === k}">${l}</button>`).join('')}</div><p class="xs dim">By creator shows each creator’s posts together, so you can put them all in one folder at once.</p></section>
+<section><h3>Backup</h3><p class="small mut">Your saves live in this browser on this phone. Keep a copy, or move it to another device.</p><div class="row"><button class="btn ghost sm" data-act="backup" ${D.items.size ? '' : 'disabled'}>Download backup</button></div></section>
+<section><h3>Start over</h3>${eraseAsk ? `<div class="row"><span class="small">Erase all saves and folders from this browser?</span><button class="btn sm danger" data-act="erase-yes">Erase</button><button class="btn sm ghost" data-act="erase-no">Keep</button></div>` : `<div class="row"><button class="btn ghost sm" data-act="erase" ${D.items.size ? '' : 'disabled'}>Erase everything</button></div>`}</section>
+<section><h3>How it works</h3><ul class="steps"><li>Each save shows the real post. Tap a folder at the bottom and the next one appears.</li><li><b>Skip</b> shows it again later. <b>Don’t need</b> sets it aside (it stays saved on Instagram). <b>Undo</b> takes back your last tap.</li><li><b>Folders</b> at the top lists everything you’ve sorted. Tap a post there to see it, move it, or open it in Instagram.</li></ul></section>
+</div></div>`;
+}
+
+/* ---------- import ---------- */
+async function importFiles(files, statusEl) {
+  const say = (html, cls = 'status') => { const el = statusEl(); if (el) el.innerHTML = `<div class="${cls}" role="status">${html}</div>`; menuStatus = el ? el.innerHTML : ''; };
+  files = files.filter(Boolean); if (!files.length) return;
+  if (!rawInflate) { say('This browser is too old to open ZIP files. Update Chrome, then try again.', 'err'); return; }
+  say(`Reading ${esc(files.length === 1 ? files[0].name || 'your file' : plural(files.length, 'file'))}…`);
+  const res = newImport(); let backup = null, html = 0;
+  try {
+    for (const f of files) {
+      const type = await sniffFile(f);
+      if (type === 'zip') {
+        for (const e of await zipEntries(f)) { const k = kindOf(e.name); if (k === 'html') { html++; continue; } if (k !== 'saved' && k !== 'cols') continue; try { addParsed(res, k, JSON.parse((await e.text()).replace(/^﻿/, ''))); } catch (er) { /* skip unreadable file */ } }
+      } else if (type === 'json') {
+        let j; try { j = JSON.parse((await f.text()).replace(/^﻿/, '')); } catch (er) { continue; }
+        if (j && (j.app === 'savepoint' || j.app === 'savepoint-web')) { backup = j; continue; }
+        const k = kindOf(f.name || '') || sniff(j); if (k === 'saved' || k === 'cols') addParsed(res, k, j);
+      } else if (type === 'html') html++;
+    }
+  } catch (e) { say(e && e.message === 'notzip' ? 'That ZIP is incomplete. Download it again from Instagram, then try once more.' : 'Couldn’t read that file. Choose the ZIP Instagram gave you.', 'err'); return; }
+  if (backup) { const n = restoreBackup(backup); say(`Restored ${plural(n, 'save')} from your backup.`); Q = null; go('sort'); return; }
+  if (!res.saved.length && !res.cols.length) { say(html ? 'This download is in HTML format. Request a new one and choose JSON as the format.' : 'No saved posts in that file. When you request the download, tick Saved.', 'err'); return; }
+  let added = 0, made = 0; const byName = new Map();
+  for (const name of new Set(res.cols.map(c => c.col))) { const had = D.folders.length; byName.set(name, addFolder(name)); if (D.folders.length > had) made++; }
+  for (const p of [...res.saved, ...res.cols]) {
+    if (!p || !p.id) continue;
+    let it = D.items.get(p.id);
+    if (!it) { it = {a: p.author || '', t: p.type === 'reel' ? 'r' : 'p', s: p.ts || 0, cp: p.cap || '', n: '', c: [], f: '', x: 0, at: 0}; D.items.set(p.id, it); added++; }
+    else { if (!it.a && p.author) it.a = p.author; if (!it.s && p.ts) it.s = p.ts; if (!it.cp && p.cap) it.cp = p.cap; }
+    if (p.col && !it.c.includes(p.col)) it.c.push(p.col);
+    if (!it.f && !it.x && it.c.length) { const f = byName.get(it.c[0]); if (f) { it.f = f.id; it.at = it.s || nowS(); } }
+  }
+  saveNow(); Q = null;
+  say(`Added ${plural(added, 'save')}${made ? `. ${plural(made, 'Instagram collection')} became ${made === 1 ? 'a folder' : 'folders'}` : ''}. ${fmtN(unsortedIds().length)} left to sort.`);
+  toast(`Added ${plural(added, 'save')}`);
+  closeMenu(); go('sort');
+}
+function restoreBackup(j) {
+  let n = 0;
+  if (j.app === 'savepoint-web') {
+    for (const f of j.folders || []) if (!folderById(f.id)) D.folders.push(f);
+    for (const [id, it] of Object.entries(j.items || {})) { D.items.set(id, it); n++; }
+    if (j.order) D.order = j.order;
+  } else {
+    const map = new Map();
+    for (const b of (j.meta && j.meta.boards) || []) { const f = addFolder(b.name); if (f) map.set(b.id, f.id); }
+    for (const o of j.items || []) { if (!o || !o.i) continue; D.items.set(o.i, {a: o.a || '', t: o.t === 'r' ? 'r' : 'p', s: o.s || 0, cp: o.cp || '', n: o.n || '', c: o.c || [], f: (o.b && map.get(o.b)) || '', x: o.x ? 1 : 0, at: o.f || 0}); n++; }
+  }
+  saveNow(); return n;
+}
+function addLinks() {
+  const ta = $('#links'); const found = (ta.value || '').split(/\s+/).map(l => { const p = postFrom(l); if (!p) return null; const m = l.match(/instagram\.com\/([A-Za-z0-9._]{1,30})\/(?:p|reels?|tv)\//i); return {...p, a: m ? cleanUser(m[1]) : ''}; }).filter(Boolean);
+  if (!found.length) { toast('No Instagram post or reel links found'); return; }
+  let n = 0; for (const p of found) if (!D.items.has(p.id)) { D.items.set(p.id, {a: p.a, t: p.type === 'reel' ? 'r' : 'p', s: nowS(), cp: '', n: '', c: [], f: '', x: 0, at: 0}); n++; }
+  saveNow(); Q = null; ta.value = ''; toast(n ? `Added ${plural(n, 'link')}` : 'Those are already here'); closeMenu(); go('sort');
+}
+function backup() {
+  saveNow();
+  const blob = new Blob([JSON.stringify({app: 'savepoint-web', v: 1, exportedAt: new Date().toISOString(), items: Object.fromEntries(D.items), folders: D.folders, order: D.order})], {type: 'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `savepoint-backup-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+/* ---------- events ---------- */
+const ACT = {
+  menu: () => openMenu(), closemenu: () => closeMenu(),
+  file: el => fileTo(el.dataset.f, el), skip: () => skip(), dontneed: () => dontNeed(), undo: () => undo(), batch: () => batchFile(),
+  newfolder: () => { newFolderOpen = true; renderDock(cur(), D.items.get(cur())); },
+  newfolder2: () => { newFolderOpen = !newFolderOpen; vFolders(); },
+  order: el => { D.order = el.dataset.v; save(); Q = null; renderMenu(); toast('Order changed'); if (view === 'sort') render(); },
+  addlinks: () => addLinks(), backup: () => backup(),
+  erase: () => { eraseAsk = true; renderMenu(); }, 'erase-no': () => { eraseAsk = false; renderMenu(); },
+  'erase-yes': () => { D.items.clear(); D.folders.length = 0; Q = null; UNDO.length = 0; saveNow(); closeMenu(); toast('Erased'); go(''); },
+  row: el => { const li = el.closest('.prow'); const id = li.dataset.id; openRow = openRow === id ? null : id; const tmp = document.createElement('ul'); tmp.innerHTML = prowHTML(id); li.replaceWith(tmp.firstElementChild); if (openRow) openPreview($(`.prow[data-id="${CSS.escape(id)}"]`)); $$('.prow[open]').forEach(r => { if (r.dataset.id !== openRow) { const t2 = document.createElement('ul'); t2.innerHTML = prowHTML(r.dataset.id); r.replaceWith(t2.firstElementChild); } }); },
+  rowdont: el => { const it = D.items.get(el.dataset.id); it.x = 1; save(); toast('Moved to Don’t need'); openRow = null; vFolder(); render(); },
+  restore: el => { const it = D.items.get(el.dataset.id); it.x = 0; save(); toast('Brought back'); openRow = null; vFolder(); render(); },
+  more: () => { shown += 50; vFolder(); },
+  editf: () => { folderEdit = true; folderDel = false; vFolder(); }, 'editf-cancel': () => { folderEdit = false; vFolder(); },
+  delf: () => { folderDel = true; vFolder(); }, 'delf-no': () => { folderDel = false; vFolder(); },
+  'delf-yes': () => { const id = decodeURIComponent(location.hash.slice(3)); for (const it of D.items.values()) if (it.f === id) { it.f = ''; it.at = 0; } const i = D.folders.findIndex(f => f.id === id); if (i >= 0) D.folders.splice(i, 1); folderEdit = folderDel = false; Q = null; save(); toast('Folder deleted'); location.hash = 'folders'; },
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  const f = ACT[el.dataset.act]; if (!f) return; e.preventDefault(); f(el);
+});
+document.addEventListener('submit', e => {
+  e.preventDefault(); const t = e.target;
+  if (t.id === 'newf') { const f = addFolder($('#nf').value); newFolderOpen = false; if (f) fileTo(f.id, null); else render(); }
+  else if (t.id === 'newf2') { const f = addFolder($('#nf2').value); newFolderOpen = false; if (f) toast(`Folder “${f.name}” added`); vFolders(); }
+  else if (t.id === 'renamef') { const f = folderById(decodeURIComponent(location.hash.slice(3))); const v = $('#rn').value.trim().slice(0, 40); if (f && v) { f.name = v; save(); } folderEdit = false; vFolder(); }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'pick' || t.id === 'pick2') { const files = [...(t.files || [])]; t.value = ''; importFiles(files, () => $(t.id === 'pick' ? '#status' : '#status2')); }
+  else if (t.dataset.move) { const it = D.items.get(t.dataset.move); if (!it || !t.value) return; if (t.value === '_none') { it.f = ''; it.x = 0; it.at = 0; } else { it.f = t.value; it.x = 0; it.at = nowS(); } save(); toast(t.value === '_none' ? 'Moved to Not sorted yet' : `Moved to ${folderById(t.value).name}`); openRow = null; Q = null; vFolder(); render(); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closeMenu(); });
+if ('ResizeObserver' in window) new ResizeObserver(sizeDock).observe($('#dock'));
+route();
+})();
+</script>
+</body>
+</html>
