@@ -97,11 +97,11 @@ When it runs outside claude.ai, Savepoint saves to local storage and can show In
 ## Tests
 
 ```sh
-node tests/parser.test.js                         # parser, 28 checks
+node tests/parser.test.js                         # parser, 33 checks
 python3 tests/make_fixtures.py /tmp/fx            # fake Instagram downloads (fictional accounts)
 ./scripts/build.sh
-node tests/site.e2e.js /tmp/fx                    # the website, 53 checks
-node tests/e2e.js /tmp/fx                         # the Claude version, 124 checks
+node tests/site.e2e.js /tmp/fx                    # the website, 59 checks
+node tests/e2e.js /tmp/fx                         # the Claude version, 125 checks
 ```
 
 `site.e2e.js` serves the website the way GitHub Pages does. It replaces Instagram with a stand-in embed that reports its height like the real one. It checks:

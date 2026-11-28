@@ -210,7 +210,9 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 const folderById = id => D.folders.find(f => f.id === id) || null;
 const isUnsorted = it => it && !it.f && !it.x;
 const unsortedIds = () => [...D.items].filter(([, it]) => isUnsorted(it)).map(([id]) => id);
-const countIn = fid => { let n = 0; for (const it of D.items.values()) if (it.f === fid && !it.x) n++; return n; };
+// A post is in a collection if you put it there, or if it's in that collection on Instagram (a post can be in several).
+const inF = (it, f) => !!f && !it.x && (it.f === f.id || (!!f.ig && (it.c || []).includes(f.name)));
+const countIn = fid => { const f = folderById(fid); let n = 0; for (const it of D.items.values()) if (inF(it, f)) n++; return n; };
 // A collection is {id, name, c: color, ig: true when it came from Instagram, false when made here}.
 function addFolder(name, ig) {
   name = String(name || '').trim().slice(0, 60); if (!name) return null;
@@ -363,20 +365,20 @@ function vFolder() {
   const key = decodeURIComponent(location.hash.slice(3));
   const f = folderById(key), special = key === 'unsorted' ? 'Not in a collection' : key === 'dontneed' ? 'Don’t need' : '';
   if (!f && !special) { location.hash = 'collections'; return; }
-  const ids = [...D.items].filter(([, it]) => key === 'unsorted' ? isUnsorted(it) : key === 'dontneed' ? it.x : (it.f === key && !it.x)).sort((a, b) => (b[1].at || b[1].s || 0) - (a[1].at || a[1].s || 0)).map(([id]) => id);
+  const ids = [...D.items].filter(([, it]) => key === 'unsorted' ? isUnsorted(it) : key === 'dontneed' ? it.x : inF(it, f)).sort((a, b) => (b[1].at || b[1].s || 0) - (a[1].at || a[1].s || 0)).map(([id]) => id);
   const name = f ? f.name : special;
   main.innerHTML = `<a class="back" href="#collections">${ic('left')}Collections</a>
 ${f && folderEdit ? `<form class="newf" id="renamef"><label class="sr" for="rn">Collection name</label><input id="rn" class="field" maxlength="60" value="${esc(f.name)}" required><button class="btn sm">Save</button></form>
 <div class="row">${folderDel ? `<span class="small">Remove “${esc(f.name)}” from Savepoint? Its posts go back to Not in a collection. Instagram isn’t changed.</span><button class="btn sm danger" data-act="delf-yes">Remove</button><button class="btn sm ghost" data-act="delf-no">Keep</button>` : `<button class="btn sm ghost" data-act="delf">Remove collection</button><button class="btn sm ghost" data-act="editf-cancel">Cancel</button>`}</div>`
   : `<div class="head"><h1>${esc(name)}</h1>${f ? `<button class="btn sm ghost" data-act="editf">Rename or delete</button>` : ''}</div>`}
 <p class="small mut">${plural(ids.length, 'post')}. Tap one to see it.${f && !f.ig ? ' This collection was made here, so it isn’t on Instagram yet.' : f ? ' “Added here” means you sorted it into this collection in Savepoint; it isn’t in the collection on Instagram yet.' : ''}</p>
-<ul class="list" id="plist">${ids.slice(0, shown).map(id => prowHTML(id)).join('') || '<li class="dim">Nothing here yet.</li>'}</ul>
+<ul class="list" id="plist">${ids.slice(0, shown).map(id => prowHTML(id, f)).join('') || '<li class="dim">Nothing here yet.</li>'}</ul>
 ${ids.length > shown ? `<button class="btn ghost wide" data-act="more">Show more</button>` : ''}`;
   if (openRow) { const r = $(`.prow[data-id="${CSS.escape(openRow)}"]`); if (r) openPreview(r); }
 }
-function prowHTML(id) {
-  const it = D.items.get(id); const isOpen = openRow === id; const f = folderById(it.f);
-  const here = f && !it.x && !onInstagram(it, f);
+function prowHTML(id, pageF) {
+  const it = D.items.get(id); const isOpen = openRow === id; const f = pageF || folderById(it.f);
+  const here = f && !it.x && it.f === f.id && !onInstagram(it, f);
   return `<li class="prow" data-id="${esc(id)}" ${isOpen ? 'open' : ''}><button data-act="row" aria-expanded="${isOpen}"><span class="c1">@${esc(it.a || 'unknown')}</span><span class="c2">${it.t === 'r' ? 'Reel' : 'Post'}${it.s ? ' · saved ' + fmtD(it.s) : ''}${here ? ' · <span class="tag">Added here</span>' : ''}</span>${it.n || it.cp ? `<span class="c3">${esc(it.n || it.cp)}</span>` : ''}<span class="chev">${ic('down')}</span></button>${isOpen ? `<div class="pbody"><div class="frame"><div class="wait"><div class="spin"></div><span>Loading…</span></div></div>
 <div class="pacts"><label class="sr" for="mv-${esc(id)}">Move to a collection</label><select class="field" id="mv-${esc(id)}" data-move="${esc(id)}"><option value="">Move to…</option>${D.folders.filter(x => x.id !== it.f).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}${it.f || it.x ? '<option value="_none">Not in a collection</option>' : ''}</select>
 ${it.x ? `<button class="btn sm ghost" data-act="restore" data-id="${esc(id)}">Bring back</button>` : `<button class="btn sm ghost" data-act="rowdont" data-id="${esc(id)}">Don’t need</button>`}<a class="btn sm ghost" href="${esc(appLink(postPath(id, it)))}">Open in Instagram</a></div></div>` : ''}</li>`;
@@ -424,7 +426,7 @@ async function importFiles(files, statusEl) {
   if (backup) { const n = restoreBackup(backup); say(`Restored ${plural(n, 'save')} from your backup.`); Q = null; go('sort'); return; }
   if (!res.saved.length && !res.cols.length) { say(html ? 'This download is in HTML format. Request a new one and choose JSON as the format.' : 'No saved posts in that file. When you request the download, tick Saved.', 'err'); return; }
   // Instagram's collections file decides what's in each collection. Posts you sorted yourself are left alone.
-  const names = [...new Set(res.cols.map(c => c.col))];
+  const names = [...new Set([...(res.colNames || []), ...res.cols.map(c => c.col)])];
   const mem = new Map(); for (const c of res.cols) { if (!c || !c.id) continue; if (!mem.has(c.id)) mem.set(c.id, []); if (!mem.get(c.id).includes(c.col)) mem.get(c.id).push(c.col); }
   let added = 0, removed = 0;
   for (const p of res.saved.concat(res.cols)) {
@@ -495,7 +497,7 @@ const ACT = {
   addlinks: () => addLinks(), backup: () => backup(),
   erase: () => { eraseAsk = true; renderMenu(); }, 'erase-no': () => { eraseAsk = false; renderMenu(); },
   'erase-yes': () => { D.items.clear(); D.folders.length = 0; Q = null; UNDO.length = 0; saveNow(); closeMenu(); toast('Erased'); go(''); },
-  row: el => { const li = el.closest('.prow'); const id = li.dataset.id; openRow = openRow === id ? null : id; const tmp = document.createElement('ul'); tmp.innerHTML = prowHTML(id); li.replaceWith(tmp.firstElementChild); if (openRow) openPreview($(`.prow[data-id="${CSS.escape(id)}"]`)); $$('.prow[open]').forEach(r => { if (r.dataset.id !== openRow) { const t2 = document.createElement('ul'); t2.innerHTML = prowHTML(r.dataset.id); r.replaceWith(t2.firstElementChild); } }); },
+  row: el => { const li = el.closest('.prow'); const id = li.dataset.id; openRow = openRow === id ? null : id; const tmp = document.createElement('ul'); tmp.innerHTML = prowHTML(id, folderById(decodeURIComponent(location.hash.slice(3)))); li.replaceWith(tmp.firstElementChild); if (openRow) openPreview($(`.prow[data-id="${CSS.escape(id)}"]`)); $$('.prow[open]').forEach(r => { if (r.dataset.id !== openRow) { const t2 = document.createElement('ul'); t2.innerHTML = prowHTML(r.dataset.id, folderById(decodeURIComponent(location.hash.slice(3)))); r.replaceWith(t2.firstElementChild); } }); },
   rowdont: el => { const it = D.items.get(el.dataset.id); it.x = 1; save(); toast('Moved to Don’t need'); openRow = null; vFolder(); render(); },
   restore: el => { const it = D.items.get(el.dataset.id); it.x = 0; save(); toast('Brought back'); openRow = null; vFolder(); render(); },
   more: () => { shown += 50; vFolder(); },

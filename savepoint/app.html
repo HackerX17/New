@@ -612,10 +612,30 @@ function isCollectionHeader(e) {
   if (/creation time|update time|collection name/i.test(keys)) return true;
   return sc.urls.some(u => /instagram\.com\/(?:[A-Za-z0-9._]+\/)?saved\//i.test(u) || /instagram\.com\/collections?\//i.test(u));
 }
+// A label on the entry itself (not one nested inside its posts).
+function topLabel(e, names) {
+  if (!e || !Array.isArray(e.label_values)) return undefined;
+  for (const lv of e.label_values) if (lv && typeof lv.label === 'string' && names.includes(lv.label.trim().toLowerCase())) return lv.value;
+  return undefined;
+}
+// The creator's username from a post's Owner block, never their display name.
+function ownerUser(post) {
+  let u = '';
+  const walk = (x, inOwner) => {
+    if (u || x == null || typeof x !== 'object') return;
+    if (Array.isArray(x)) { for (const y of x) walk(y, inOwner); return; }
+    const own = inOwner || (typeof x.title === 'string' && /owner|author/i.test(x.title));
+    if (own && typeof x.label === 'string' && /^user ?name$/i.test(x.label.trim())) { u = cleanUser(x.value); return; }
+    for (const v of Object.values(x)) walk(v, own);
+  };
+  walk(post, false);
+  return u;
+}
 function headerName(e) {
   if (!e || typeof e !== 'object') return '';
   const smd = e.string_map_data;
   if (smd) { const nm = smd.Name || smd.name || smd['Collection name'] || smd['Collection Name']; if (nm && typeof nm.value === 'string' && nm.value.trim()) return fixText(nm.value).trim(); }
+  const tl = topLabel(e, ['collection name', 'name']); if (typeof tl === 'string' && tl.trim()) return fixText(tl).trim();
   const sc = scan(e);
   for (const k of ['collection name', 'name', 'collection']) if (typeof sc.labels[k] === 'string' && sc.labels[k].trim()) return fixText(sc.labels[k]).trim();
   if (typeof e.title === 'string' && e.title.trim() && !/^collections?$/i.test(e.title.trim())) return fixText(e.title).trim();
@@ -630,14 +650,27 @@ function colItem(e, url, col, skipTitle = true) {
   return {...p, author, ts: normTs(sc.ts[0]), col, cap: capOf(sc)};
 }
 function parseCollections(j) {
-  const out = []; let cur = '';
+  const out = [], names = []; let cur = '';
+  const named = n => { if (n && !names.includes(n)) names.push(n); };
   for (const e of entriesOf(j)) {
+    // Newest exports: one entry per collection, its own Name label on top and its posts nested inside.
+    const lists = e && Array.isArray(e.label_values) ? e.label_values.filter(lv => lv && Array.isArray(lv.dict)) : [];
+    const own = fixText(String(topLabel(e, ['collection name', 'name']) ?? '')).trim();
+    if (own && lists.length) {
+      named(own);
+      for (const lv of lists) for (const post of lv.dict) {
+        const sc = scan(post); const url = sc.urls.find(u => POST_RE.test(u)); if (!url) continue;
+        const m = url.match(/instagram\.com\/([A-Za-z0-9._]{1,30})\/(?:p|reels?|tv)\//i);
+        out.push({...postFrom(url), author: ownerUser(post) || (m ? cleanUser(m[1]) : ''), ts: normTs(sc.ts[0]), cap: capOf(sc), col: own});
+      }
+      continue;
+    }
     const posts = postEntries(e);
-    if (!posts.length) { if (isCollectionHeader(e)) { const h = headerName(e); if (h) cur = h; } continue; }
+    if (!posts.length) { if (isCollectionHeader(e)) { const h = headerName(e); if (h) { cur = h; named(h); } } continue; }
     if (posts.length === 1 && !isCollectionHeader(e)) out.push(colItem(e, posts[0].url, cur));
-    else { const h = headerName(e) || cur; for (const p of posts) out.push(colItem(p.entry === e ? {} : p.entry, p.url, h, false)); }
+    else { const h = headerName(e) || cur; named(h); for (const p of posts) out.push(colItem(p.entry === e ? {} : p.entry, p.url, h, false)); }
   }
-  return out.filter(x => x && x.col);
+  const res = out.filter(x => x && x.col); res.names = names; return res;
 }
 function parseLiked(j) {
   const out = [];
@@ -661,7 +694,7 @@ function kindOf(path) {
   if (p.endsWith('.html')) return /^(saved_posts|saved_collections|liked_posts|followers|following)/.test(p) ? 'html' : '';
   if (!p.endsWith('.json')) return '';
   if (p.startsWith('saved_posts')) return 'saved';
-  if (p.startsWith('saved_collections')) return 'cols';
+  if (p.startsWith('saved_collections') || /[-_ ]saved_collections/.test(p)) return 'cols';
   if (p.startsWith('liked_posts')) return 'liked';
   if (/^followers(_\d+)?\.json$/.test(p)) return 'followers';
   if (/^following(_\d+)?\.json$/.test(p)) return 'following';
@@ -670,7 +703,10 @@ function kindOf(path) {
   return '';
 }
 function sniff(j) {
-  if (Array.isArray(j)) return j.length && j[0] && j[0].string_list_data ? 'followers' : '';
+  if (Array.isArray(j)) {
+    if (j.length && j[0] && Array.isArray(j[0].label_values) && j.some(e => e && Array.isArray(e.label_values) && e.label_values.some(lv => lv && Array.isArray(lv.dict)) && topLabel(e, ['name', 'collection name']) !== undefined)) return 'cols';
+    return j.length && j[0] && j[0].string_list_data ? 'followers' : '';
+  }
   if (!j || typeof j !== 'object') return '';
   const k = Object.keys(j).join(' ');
   if (/saved_saved_media/.test(k)) return 'saved';
@@ -686,7 +722,7 @@ function newImport() { return {saved: [], cols: [], liked: [], followers: null, 
 function addParsed(res, kind, j) {
   res.files++; res.kinds = res.kinds || {}; res.kinds[kind] = (res.kinds[kind] || 0) + 1;
   if (kind === 'saved') res.saved.push(...parseSaved(j));
-  else if (kind === 'cols') res.cols.push(...parseCollections(j));
+  else if (kind === 'cols') { const pc = parseCollections(j); res.cols.push(...pc); res.colNames = res.colNames || []; for (const n of pc.names || []) if (!res.colNames.includes(n)) res.colNames.push(n); }
   else if (kind === 'liked') res.liked.push(...parseLiked(j));
   else { const list = parsePeople(j); res[kind] = (res[kind] || []).concat(list); }
 }
@@ -719,6 +755,8 @@ const SET = (() => { const d = {skin: 'arcade', sound: false}; try { return Obje
 const savePrefs = () => { try { localStorage.setItem('savepoint.prefs', JSON.stringify(SET)); } catch (e) { /* storage blocked */ } };
 
 const boardById = id => S.boards.find(b => b.id === id) || null;
+// A save is in a collection if you filed it there, or if it's in that collection on Instagram (a post can be in several).
+const inBoard = (it, b) => !!b && (it.board === b.id || (!!b.ig && (it.cols || []).includes(b.name)));
 const postUrl = it => `https://www.instagram.com/${it.type === 'reel' ? 'reel' : 'p'}/${it.id}/`;
 const profUrl = u => `https://www.instagram.com/${encodeURIComponent(u)}/`;
 const live = () => [...S.items.values()].filter(it => !it.letGo);
@@ -1051,7 +1089,7 @@ function filtered() {
   const arr = [];
   for (const it of S.items.values()) {
     if (UI.filter === 'letgo' ? !it.letGo : it.letGo) continue;
-    if (bf === '_none' ? it.board : (bf && it.board !== bf)) continue;
+    if (bf === '_none' ? it.board : (bf && !inBoard(it, boardById(bf)))) continue;
     const f = UI.filter;
     if (f === 'unsorted' && it.board) continue;
     if ((f === 'reel' || f === 'post') && it.type !== f) continue;
@@ -1082,7 +1120,7 @@ function vLibrary() {
   const all = S.items.size, un = unsorted().length, lv = live().length, done = pct(lv - un, lv);
   let head;
   if (b) {
-    const its = live().filter(i => i.board === b.id);
+    const its = live().filter(i => inBoard(i, b));
     head = UI.boardEdit ? boardEditForm(b) : `<div class="head"><div><a class="back" href="#boards">${ic('left')}Collections</a><h1 style="display:flex;align-items:center;gap:12px"><span style="width:16px;height:16px;border-radius:5px;background:var(--b${b.color});flex:none"></span>${esc(b.name)}</h1><p class="mut">${plural(its.length, 'save')}${its.filter(i => i.status === 'done').length ? ` · ${its.filter(i => i.status === 'done').length} done` : ''}${b.ig ? ' · from your Instagram collections' : ''}</p></div>
 <div class="head-actions"><button class="btn ghost" data-act="board-edit">${ic('edit')}Edit collection</button><a class="btn" href="#sort">${ic('bolt')}Sort more in</a></div></div>`;
   } else {
@@ -1160,7 +1198,7 @@ function renderDrawer(focus) {
   </div></div>
   ${it.cap ? `<p class="capq"><span class="xs dim">Caption from Instagram</span>${esc(it.cap)}</p>` : ''}
   <div id="d-embed"></div>
-  <section><h3 class="lbl">Collection</h3><div class="chips">${S.boards.map(b => `<button class="chip bc" style="--c:var(--b${b.color})" data-act="d-board" data-b="${b.id}" aria-pressed="${it.board === b.id}">${esc(b.name)}</button>`).join('')}<button class="chip" data-act="d-board" data-b="" aria-pressed="${!it.board}">Unsorted</button></div></section>
+  <section><h3 class="lbl">Collection</h3><div class="chips">${S.boards.map(b => `<button class="chip bc" style="--c:var(--b${b.color})" data-act="d-board" data-b="${b.id}" aria-pressed="${inBoard(it, b)}">${esc(b.name)}</button>`).join('')}<button class="chip" data-act="d-board" data-b="" aria-pressed="${!it.board}">Unsorted</button></div></section>
   <section><label class="lbl" for="d-note">What is it?</label><textarea id="d-note" class="field" rows="3" maxlength="500" placeholder="e.g. 20-minute chili noodles, or the hotel with the cliff pool">${esc(it.note)}</textarea></section>
   <section><h3 class="lbl">Rating</h3><div class="stars" role="group" aria-label="Rating">${[1, 2, 3, 4, 5].map(n => `<button class="star" data-act="d-rate" data-r="${n}" aria-label="${n} star${n > 1 ? 's' : ''}" aria-pressed="${it.rating >= n}">${ic('star')}</button>`).join('')}</div></section>
   <section><h3 class="lbl">Status</h3><div class="seg" role="group" aria-label="Status">${STATUS.map(([k, v]) => `<button data-act="d-status" data-v="${k}" aria-pressed="${it.status === k}">${v}</button>`).join('')}</div></section>
@@ -1331,7 +1369,7 @@ function addBoard(name, color, ig) {
   return b;
 }
 function boardTile(b) {
-  const its = live().filter(i => i.board === b.id).sort((x, y) => (y.filedAt || y.savedAt) - (x.filedAt || x.savedAt));
+  const its = live().filter(i => inBoard(i, b)).sort((x, y) => (y.filedAt || y.savedAt) - (x.filedAt || x.savedAt));
   const done = its.filter(i => i.status === 'done').length;
   return `<a class="btile" href="#board-${b.id}" style="--c:var(--b${b.color})"><span class="stack" aria-hidden="true">${its.slice(0, 3).map((it, k) => coverHTML(it, false, `left:${14 + k * 52}px;transform:rotate(${(k - 1) * 5}deg)`)).join('')}</span>
 <span class="bt-name">${esc(b.name)}</span><span class="small mut num">${plural(its.length, 'save')}${done ? ` · ${done} done` : ''}</span>${b.ig ? '<span class="igbadge">From Instagram</span>' : '<span class="igbadge">Made here</span>'}</a>`;
@@ -1447,7 +1485,7 @@ function vStats() {
   const ms = monthSeries(its); const busiest = ms.length ? ms.reduce((a, b) => b.n > a.n ? b : a) : null;
   let gap = 0, gapAt = null; for (let k = 1; k < dated.length; k++) { const g = dated[k].savedAt - dated[k - 1].savedAt; if (g > gap) { gap = g; gapAt = dated[k - 1]; } }
   const today = new Date(); const otd = dated.filter(i => { const d = new Date(i.savedAt * 1000); return d.getMonth() === today.getMonth() && d.getDate() === today.getDate() && d.getFullYear() < today.getFullYear(); }).slice(-8).reverse();
-  const bRows = S.boards.map(b => ({label: b.name, n: its.filter(i => i.board === b.id).length, b})).sort((x, y) => y.n - x.n);
+  const bRows = S.boards.map(b => ({label: b.name, n: its.filter(i => inBoard(i, b)).length, b})).sort((x, y) => y.n - x.n);
   const bMax = Math.max(1, ...bRows.map(r => r.n));
   main.innerHTML = `${banner()}<div class="head"><div><p class="eyebrow">Stats</p><h1>Your saving habits</h1><p class="mut">Everything here comes from the dates and creators in your Instagram download.</p></div></div>
 <div class="statgrid"><div class="tile"><span class="v num">${fmtN(total)}</span><span class="small mut">saves</span></div><div class="tile"><span class="v num">${pct(filed, total)}%</span><span class="small mut">organized into collections</span></div><div class="tile"><span class="v num">${fmtN(creators.length)}</span><span class="small mut">creators saved</span></div><div class="tile"><span class="v num">${years ? plural(years, 'yr') : '<1 yr'}</span><span class="small mut">of saving</span></div>${S.liked ? `<div class="tile"><span class="v num">${fmtN(S.liked.total)}</span><span class="small mut">posts liked</span></div>` : ''}</div>
@@ -1612,7 +1650,7 @@ function impHTML() {
   if (im.status === 'reading') return `<div class="found" role="status"><b>Reading ${esc(im.name || 'your file')}${im.size ? ` (${fmtSize(im.size)})` : ''}…</b>${im.step ? `<p class="xs mut">${esc(im.step)}</p>` : ''}<div class="mbar sm busy"><i></i></div></div>`;
   if (im.status === 'error') return `<p class="err" role="alert">${esc(im.msg)}</p>`;
   if (im.status === 'merged') return `<div class="found" role="status"><b>Done.</b><p>${esc(im.msg)}</p><div class="row"><a class="btn" href="#sort">${ic('bolt')}Start sorting</a><a class="btn ghost" href="#library">Go to library</a></div></div>`;
-  const r = im.res; const ids = new Set([...r.saved, ...r.cols].map(x => x.id)); const cols = new Set(r.cols.map(c => c.col)); const caps = new Set([...r.saved, ...r.cols].filter(x => x.cap).map(x => x.id));
+  const r = im.res; const ids = new Set([...r.saved, ...r.cols].map(x => x.id)); const cols = new Set([...(r.colNames || []), ...r.cols.map(c => c.col)]); const caps = new Set([...r.saved, ...r.cols].filter(x => x.cap).map(x => x.id));
   return `<div class="found" role="status"><b>Found in your download</b><ul>
 <li>${plural(ids.size, 'saved post')}${cols.size ? ` in ${plural(cols.size, 'collection')}` : ''}${caps.size ? `, ${fmtN(caps.size)} with captions` : ''}</li>
 ${r.liked.length ? `<li>${plural(r.liked.length, 'liked post')}</li>` : ''}${r.following ? `<li>${plural(r.following.length, 'account')} you follow</li>` : ''}${r.followers ? `<li>${plural(r.followers.length, 'follower')}</li>` : ''}${r.unfollowed ? `<li>${plural(r.unfollowed.length, 'recently unfollowed account')}</li>` : ''}</ul>
@@ -1750,7 +1788,7 @@ async function runImport(files, folder) {
   const any = res.saved.length || res.cols.length || res.liked.length || res.followers || res.following;
   if (!any) {
     setImp({status: 'error', msg: res.html ? 'This download is in HTML format. Request a new one from Instagram and choose JSON as the format.'
-      : other && !res.files ? 'That file isn’t an Instagram download. Pick the ZIP from Instagram (its name usually starts with “instagram”), or the JSON files inside it.'
+      : (other || res.bad) && !res.files ? 'That file isn’t an Instagram download. Pick the ZIP from Instagram (its name usually starts with “instagram”), or the JSON files inside it.'
       : 'No saved posts or follower lists in there. When you request the download, tick Saved, Likes and Followers and following.'});
     return;
   }
@@ -1790,7 +1828,7 @@ function mergeImport() {
       const b = boardById(it.board);
       if (b && b.ig && it.filedAt && it.filedAt === it.savedAt && !it.cols.includes(b.name)) { it.board = null; it.filedAt = 0; markItem(id); }
     }
-    const keep = new Set(r.cols.map(c => c.col.toLowerCase()));
+    const keep = new Set([...(r.colNames || []), ...r.cols.map(c => c.col)].map(n => n.toLowerCase()));
     S.boards = S.boards.filter(b => {
       if (!b.ig || keep.has(b.name.toLowerCase())) return true;
       if ([...S.items.values()].some(it => it.board === b.id)) { b.ig = false; return true; }
@@ -1801,7 +1839,7 @@ function mergeImport() {
   let colBoards = 0;
   if (colsOn) {
     const map = new Map();
-    for (const name of new Set(r.cols.map(c => c.col))) { const had = S.boards.length; map.set(name, addBoard(name, 0, true)); if (S.boards.length > had) colBoards++; }
+    for (const name of new Set([...(r.colNames || []), ...r.cols.map(c => c.col)])) { const had = S.boards.length; map.set(name, addBoard(name, 0, true)); if (S.boards.length > had) colBoards++; }
     for (const it of touched) if (!it.board && !it.letGo && it.cols.length) { const b = map.get(it.cols[0]); if (b) { it.board = b.id; it.filedAt = it.savedAt || nowS(); } }
   }
   const ruled = rulesOn ? applyRules(touched) : 0;

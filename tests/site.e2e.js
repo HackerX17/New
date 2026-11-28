@@ -175,6 +175,31 @@ const file = (n, as, mime = 'application/octet-stream') => ({name: as || n, mime
       await c4.close();
     }
 
+    console.log('\n== Newest Instagram layout, over creator-named collections from the old bug ==');
+    {
+      const errs5 = [];
+      const c5 = await browser.newContext({...devices['Pixel 7']});
+      const q = await page(c5, errs5, 'newest');
+      const saved = JSON.parse(fs.readFileSync(fx('saved_posts.json'), 'utf8')).saved_saved_media;
+      const idOf = e => e.string_map_data['Saved on'].href.match(/\/(p|reel)\/([^/]+)\//)[2];
+      const seed = {v: 1, order: 'new', folders: [{id: 'fGOD', name: 'God of Prompt', c: 1, ig: true}, {id: 'fDAN', name: 'Daniel Example', c: 2, ig: true}], items: {}};
+      saved.slice(200, 212).forEach((e, i) => { const ts = e.string_map_data['Saved on'].timestamp; seed.items[idOf(e)] = {a: e.title, t: 'p', s: ts, cp: '', n: '', c: [i % 2 ? 'God of Prompt' : 'Daniel Example'], f: i % 2 ? 'fGOD' : 'fDAN', x: 0, at: ts, by: 'ig'}; });
+      await c5.addInitScript(st => { if (!sessionStorage.getItem('seeded')) { localStorage.setItem('savepoint-web-v1', JSON.stringify(st)); sessionStorage.setItem('seeded', '1'); } }, seed);
+      await q.goto(BASE); await q.waitForSelector('#main h1');
+      await q.click('#menubtn'); await q.setInputFiles('#pick2', file('export_lv.zip', 'instagram-export.zip')); await q.waitForSelector('#summary .summary');
+      const sm = await txt(q, '#summary');
+      ok(/Your 3 collections from Instagram/.test(sm) && /Gadgets · 10/.test(sm) && /Workouts · 6/.test(sm) && /Empty one · 0/.test(sm), 'newest layout: exactly your collections come in (a post in two shows in both), including an empty one: ' + sm.slice(0, 160));
+      ok(/Removed 2 old collections/.test(sm), 'creator-named collections from the old import are removed');
+      await q.click('#tab-folders'); await q.waitForSelector('.frow');
+      const names = await q.locator('.list').first().locator('.frow .nm').allInnerTexts();
+      ok(names.join('|') === 'Gadgets|Workouts|Empty one', 'Collections shows only your collections: ' + names.join(', '));
+      ok((await left(q)) === 400 - 15, 'everything not in a collection is waiting to be sorted (385)');
+      await q.click('.frow >> text=Gadgets'); await q.waitForSelector('.prow');
+      ok(/@\S+/.test(await txt(q, '.prow .c1')) && !/Display Name/.test(await txt(q, '#plist')), 'posts show creator usernames, not display names');
+      ok(errs5.length === 0, 'no page errors' + (errs5.length ? ': ' + errs5.join(' | ') : ''));
+      await c5.close();
+    }
+
     console.log('\n== Desktop and iPhone ==');
     const errs2 = [];
     const ctx2 = await browser.newContext({viewport: {width: 1280, height: 860}});

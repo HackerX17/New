@@ -257,6 +257,7 @@ async function artifactRun(browser) {
     [[fileFrom('export_truncated.zip', 'instagram.zip', 'application/zip')], /incomplete/, 'half-downloaded ZIP is caught'],
     [[fileFrom('export_zip64.zip', 'big.zip', 'application/zip')], /400 saved posts/, 'very large ZIP format (66,000 files)'],
     [[fileFrom('export_stored.zip', 'stored.zip', 'application/x-zip-compressed')], /400 saved posts/, 'uncompressed ZIP'],
+    [[fileFrom('export_lv.zip', 'instagram.zip', 'application/zip')], /400 saved posts in 3 collections/, 'newest Instagram layout: 3 collections, including an empty one'],
     [[fileFrom('saved_posts.json', 'saved_posts.json', 'application/json'), fileFrom('followers_1.json', 'followers_1.json', ''), fileFrom('following.json', 'following.json', 'text/plain')], /400 saved posts.*220 accounts you follow.*120 followers/, 'several JSON files at once'],
     [[fileFrom('renamed_download.json', 'download (1)', '')], /400 saved posts/, 'renamed JSON file is recognized by its contents'],
   ];

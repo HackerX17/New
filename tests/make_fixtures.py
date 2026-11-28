@@ -79,9 +79,21 @@ for ci, nm in enumerate(['AI tools', 'Money', mojibake('Music 🎧')]):
 with zipfile.ZipFile(f'{out}/export_newcols.zip', 'w', zipfile.ZIP_DEFLATED) as z:
     z.writestr('your_instagram_activity/saved/saved_posts.json', json.dumps(saved_posts))
     z.writestr('your_instagram_activity/saved/saved_collections.json', json.dumps({'saved_saved_collections': cols_new}))
+# Newest layout (late 2026): a list with one entry per collection; posts nested inside, each with an Owner block
+# holding the creator's display Name and Username. Includes an empty collection and a post in two collections.
+def lv_post(e):
+    href = e['string_map_data']['Saved on']['href']
+    return {'title': '', 'dict': [{'label': 'URL', 'value': href, 'href': href}, {'label': 'Caption', 'value': 'Caption for ' + e['title']}, {'label': 'Title', 'value': ''},
+        {'title': 'Hashtags', 'dict': []}, {'title': 'Owner', 'dict': [{'title': '', 'dict': [{'label': 'URL', 'value': 'https://www.instagram.com/' + e['title']}, {'label': 'Name', 'value': 'Display Name ' + e['title'].upper()}, {'label': 'Username', 'value': e['title']}]}]}, {'title': 'Brand partner', 'dict': []}]}
+def lv_coll(name, posts):
+    return {'timestamp': 1700000000, 'media': [], 'label_values': [{'label': 'Name', 'value': name}, {'label': 'Type', 'value': 'Default'}, {'label': 'Privacy', 'value': 'Private'}, {'label': 'Update time', 'timestamp_value': 1700000001}, {'title': 'Media', 'dict': posts}]}
+cols_lv = [lv_coll('Gadgets', [lv_post(e) for e in saved[200:210]]), lv_coll('Workouts', [lv_post(e) for e in saved[210:215]] + [lv_post(saved[200])]), lv_coll('Empty one', [])]
+with zipfile.ZipFile(f'{out}/export_lv.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+    z.writestr('your_instagram_activity/saved/saved_posts.json', json.dumps(saved_posts))
+    z.writestr('your_instagram_activity/saved/saved_collections.json', json.dumps(cols_lv))
 data = open(f'{out}/export.zip', 'rb').read()
 open(f'{out}/export_truncated.zip', 'wb').write(data[:len(data) // 2])
-open(f'{out}/random.bin', 'wb').write(os.urandom(5000))
+open(f'{out}/random.bin', 'wb').write(b'\xff\xd8\xff' + bytes(R.randrange(256) for _ in range(4997)))  # starts like a JPEG
 for name in ['saved_posts.json', 'followers_1.json', 'following.json']:
     src = [k for k in files if k.endswith('/' + name)][0]
     open(f'{out}/{name}', 'w').write(json.dumps(files[src]))

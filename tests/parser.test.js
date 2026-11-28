@@ -103,6 +103,19 @@ const colsLabels = {saved_saved_collections: [
 r = P.parseCollections(colsLabels);
 ok(r.length === 2 && r.every(x => x.col === 'Music'), 'label-style collections file: posts land in "Music", the unlinked one is skipped');
 
+// Newest exports: a list with one entry per collection; its posts are nested inside, each with an Owner block.
+// The collection name is the entry's own Name label; the Name inside Owner is a creator and must never become one.
+const post = (code, user, display, cap) => ({title: '', dict: [{label: 'URL', value: `https://www.instagram.com/reel/${code}/`, href: `https://www.instagram.com/reel/${code}/`}, {label: 'Caption', value: cap}, {label: 'Title', value: ''},
+  {title: 'Hashtags', dict: []}, {title: 'Owner', dict: [{title: '', dict: [{label: 'URL', value: `https://www.instagram.com/${user}`}, {label: 'Name', value: display}, {label: 'Username', value: user}]}]}, {title: 'Brand partner', dict: []}]});
+const coll = (name, posts) => ({timestamp: 1, media: [], label_values: [{label: 'Name', value: name}, {label: 'Type', value: 'Default'}, {label: 'Privacy', value: 'Private'}, {label: 'Update time', timestamp_value: 2}, {title: 'Media', dict: posts}]});
+const colsLV = [coll('Recipes', [post('LvReel00001', 'chef.kai', 'Kai The Chef', 'Noodles'), post('LvReel00002', 'dan.example', 'Daniel Example', 'Pasta')]), coll('Empty one', []), coll('Travel', [post('LvReel00001', 'chef.kai', 'Kai The Chef', 'Noodles')])];
+ok(P.sniff(colsLV) === 'cols' && P.kindOf('e5550474-saved_collections.json') === 'cols', 'newest collections file is recognized by contents and by a prefixed name');
+const resLV = P.newImport(); P.addParsed(resLV, 'cols', colsLV);
+ok(resLV.colNames.join('|') === 'Recipes|Empty one|Travel', 'collection names come from each entry’s own Name, in order, including an empty collection: ' + resLV.colNames.join('|'));
+ok(resLV.cols.length === 3 && resLV.cols[0].col === 'Recipes' && resLV.cols[2].col === 'Travel' && resLV.cols[2].id === 'LvReel00001', 'posts land in their collections; one post can be in two');
+ok(resLV.cols[0].author === 'chef.kai' && resLV.cols[1].author === 'dan.example' && resLV.cols[0].cap === 'Noodles', 'creator is the Owner’s username (not display name); caption kept');
+ok(!resLV.colNames.some(n => /Kai The Chef|Daniel Example/.test(n)), 'no collection is named after a creator');
+
 // Pipeline
 const res = P.newImport(); P.addParsed(res, 'saved', saved); P.addParsed(res, 'followers', followers); P.addParsed(res, 'followers', followers);
 ok(res.saved.length === 2 && res.followers.length === 2 && res.files === 3, 'addParsed accumulates split follower files');

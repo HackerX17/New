@@ -246,10 +246,30 @@ function isCollectionHeader(e) {
   if (/creation time|update time|collection name/i.test(keys)) return true;
   return sc.urls.some(u => /instagram\.com\/(?:[A-Za-z0-9._]+\/)?saved\//i.test(u) || /instagram\.com\/collections?\//i.test(u));
 }
+// A label on the entry itself (not one nested inside its posts).
+function topLabel(e, names) {
+  if (!e || !Array.isArray(e.label_values)) return undefined;
+  for (const lv of e.label_values) if (lv && typeof lv.label === 'string' && names.includes(lv.label.trim().toLowerCase())) return lv.value;
+  return undefined;
+}
+// The creator's username from a post's Owner block, never their display name.
+function ownerUser(post) {
+  let u = '';
+  const walk = (x, inOwner) => {
+    if (u || x == null || typeof x !== 'object') return;
+    if (Array.isArray(x)) { for (const y of x) walk(y, inOwner); return; }
+    const own = inOwner || (typeof x.title === 'string' && /owner|author/i.test(x.title));
+    if (own && typeof x.label === 'string' && /^user ?name$/i.test(x.label.trim())) { u = cleanUser(x.value); return; }
+    for (const v of Object.values(x)) walk(v, own);
+  };
+  walk(post, false);
+  return u;
+}
 function headerName(e) {
   if (!e || typeof e !== 'object') return '';
   const smd = e.string_map_data;
   if (smd) { const nm = smd.Name || smd.name || smd['Collection name'] || smd['Collection Name']; if (nm && typeof nm.value === 'string' && nm.value.trim()) return fixText(nm.value).trim(); }
+  const tl = topLabel(e, ['collection name', 'name']); if (typeof tl === 'string' && tl.trim()) return fixText(tl).trim();
   const sc = scan(e);
   for (const k of ['collection name', 'name', 'collection']) if (typeof sc.labels[k] === 'string' && sc.labels[k].trim()) return fixText(sc.labels[k]).trim();
   if (typeof e.title === 'string' && e.title.trim() && !/^collections?$/i.test(e.title.trim())) return fixText(e.title).trim();
@@ -264,14 +284,27 @@ function colItem(e, url, col, skipTitle = true) {
   return {...p, author, ts: normTs(sc.ts[0]), col, cap: capOf(sc)};
 }
 function parseCollections(j) {
-  const out = []; let cur = '';
+  const out = [], names = []; let cur = '';
+  const named = n => { if (n && !names.includes(n)) names.push(n); };
   for (const e of entriesOf(j)) {
+    // Newest exports: one entry per collection, its own Name label on top and its posts nested inside.
+    const lists = e && Array.isArray(e.label_values) ? e.label_values.filter(lv => lv && Array.isArray(lv.dict)) : [];
+    const own = fixText(String(topLabel(e, ['collection name', 'name']) ?? '')).trim();
+    if (own && lists.length) {
+      named(own);
+      for (const lv of lists) for (const post of lv.dict) {
+        const sc = scan(post); const url = sc.urls.find(u => POST_RE.test(u)); if (!url) continue;
+        const m = url.match(/instagram\.com\/([A-Za-z0-9._]{1,30})\/(?:p|reels?|tv)\//i);
+        out.push({...postFrom(url), author: ownerUser(post) || (m ? cleanUser(m[1]) : ''), ts: normTs(sc.ts[0]), cap: capOf(sc), col: own});
+      }
+      continue;
+    }
     const posts = postEntries(e);
-    if (!posts.length) { if (isCollectionHeader(e)) { const h = headerName(e); if (h) cur = h; } continue; }
+    if (!posts.length) { if (isCollectionHeader(e)) { const h = headerName(e); if (h) { cur = h; named(h); } } continue; }
     if (posts.length === 1 && !isCollectionHeader(e)) out.push(colItem(e, posts[0].url, cur));
-    else { const h = headerName(e) || cur; for (const p of posts) out.push(colItem(p.entry === e ? {} : p.entry, p.url, h, false)); }
+    else { const h = headerName(e) || cur; named(h); for (const p of posts) out.push(colItem(p.entry === e ? {} : p.entry, p.url, h, false)); }
   }
-  return out.filter(x => x && x.col);
+  const res = out.filter(x => x && x.col); res.names = names; return res;
 }
 function parseLiked(j) {
   const out = [];
@@ -295,7 +328,7 @@ function kindOf(path) {
   if (p.endsWith('.html')) return /^(saved_posts|saved_collections|liked_posts|followers|following)/.test(p) ? 'html' : '';
   if (!p.endsWith('.json')) return '';
   if (p.startsWith('saved_posts')) return 'saved';
-  if (p.startsWith('saved_collections')) return 'cols';
+  if (p.startsWith('saved_collections') || /[-_ ]saved_collections/.test(p)) return 'cols';
   if (p.startsWith('liked_posts')) return 'liked';
   if (/^followers(_\d+)?\.json$/.test(p)) return 'followers';
   if (/^following(_\d+)?\.json$/.test(p)) return 'following';
@@ -304,7 +337,10 @@ function kindOf(path) {
   return '';
 }
 function sniff(j) {
-  if (Array.isArray(j)) return j.length && j[0] && j[0].string_list_data ? 'followers' : '';
+  if (Array.isArray(j)) {
+    if (j.length && j[0] && Array.isArray(j[0].label_values) && j.some(e => e && Array.isArray(e.label_values) && e.label_values.some(lv => lv && Array.isArray(lv.dict)) && topLabel(e, ['name', 'collection name']) !== undefined)) return 'cols';
+    return j.length && j[0] && j[0].string_list_data ? 'followers' : '';
+  }
   if (!j || typeof j !== 'object') return '';
   const k = Object.keys(j).join(' ');
   if (/saved_saved_media/.test(k)) return 'saved';
@@ -320,7 +356,7 @@ function newImport() { return {saved: [], cols: [], liked: [], followers: null, 
 function addParsed(res, kind, j) {
   res.files++; res.kinds = res.kinds || {}; res.kinds[kind] = (res.kinds[kind] || 0) + 1;
   if (kind === 'saved') res.saved.push(...parseSaved(j));
-  else if (kind === 'cols') res.cols.push(...parseCollections(j));
+  else if (kind === 'cols') { const pc = parseCollections(j); res.cols.push(...pc); res.colNames = res.colNames || []; for (const n of pc.names || []) if (!res.colNames.includes(n)) res.colNames.push(n); }
   else if (kind === 'liked') res.liked.push(...parseLiked(j));
   else { const list = parsePeople(j); res[kind] = (res[kind] || []).concat(list); }
 }
@@ -423,7 +459,9 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 const folderById = id => D.folders.find(f => f.id === id) || null;
 const isUnsorted = it => it && !it.f && !it.x;
 const unsortedIds = () => [...D.items].filter(([, it]) => isUnsorted(it)).map(([id]) => id);
-const countIn = fid => { let n = 0; for (const it of D.items.values()) if (it.f === fid && !it.x) n++; return n; };
+// A post is in a collection if you put it there, or if it's in that collection on Instagram (a post can be in several).
+const inF = (it, f) => !!f && !it.x && (it.f === f.id || (!!f.ig && (it.c || []).includes(f.name)));
+const countIn = fid => { const f = folderById(fid); let n = 0; for (const it of D.items.values()) if (inF(it, f)) n++; return n; };
 // A collection is {id, name, c: color, ig: true when it came from Instagram, false when made here}.
 function addFolder(name, ig) {
   name = String(name || '').trim().slice(0, 60); if (!name) return null;
@@ -576,20 +614,20 @@ function vFolder() {
   const key = decodeURIComponent(location.hash.slice(3));
   const f = folderById(key), special = key === 'unsorted' ? 'Not in a collection' : key === 'dontneed' ? 'Don’t need' : '';
   if (!f && !special) { location.hash = 'collections'; return; }
-  const ids = [...D.items].filter(([, it]) => key === 'unsorted' ? isUnsorted(it) : key === 'dontneed' ? it.x : (it.f === key && !it.x)).sort((a, b) => (b[1].at || b[1].s || 0) - (a[1].at || a[1].s || 0)).map(([id]) => id);
+  const ids = [...D.items].filter(([, it]) => key === 'unsorted' ? isUnsorted(it) : key === 'dontneed' ? it.x : inF(it, f)).sort((a, b) => (b[1].at || b[1].s || 0) - (a[1].at || a[1].s || 0)).map(([id]) => id);
   const name = f ? f.name : special;
   main.innerHTML = `<a class="back" href="#collections">${ic('left')}Collections</a>
 ${f && folderEdit ? `<form class="newf" id="renamef"><label class="sr" for="rn">Collection name</label><input id="rn" class="field" maxlength="60" value="${esc(f.name)}" required><button class="btn sm">Save</button></form>
 <div class="row">${folderDel ? `<span class="small">Remove “${esc(f.name)}” from Savepoint? Its posts go back to Not in a collection. Instagram isn’t changed.</span><button class="btn sm danger" data-act="delf-yes">Remove</button><button class="btn sm ghost" data-act="delf-no">Keep</button>` : `<button class="btn sm ghost" data-act="delf">Remove collection</button><button class="btn sm ghost" data-act="editf-cancel">Cancel</button>`}</div>`
   : `<div class="head"><h1>${esc(name)}</h1>${f ? `<button class="btn sm ghost" data-act="editf">Rename or delete</button>` : ''}</div>`}
 <p class="small mut">${plural(ids.length, 'post')}. Tap one to see it.${f && !f.ig ? ' This collection was made here, so it isn’t on Instagram yet.' : f ? ' “Added here” means you sorted it into this collection in Savepoint; it isn’t in the collection on Instagram yet.' : ''}</p>
-<ul class="list" id="plist">${ids.slice(0, shown).map(id => prowHTML(id)).join('') || '<li class="dim">Nothing here yet.</li>'}</ul>
+<ul class="list" id="plist">${ids.slice(0, shown).map(id => prowHTML(id, f)).join('') || '<li class="dim">Nothing here yet.</li>'}</ul>
 ${ids.length > shown ? `<button class="btn ghost wide" data-act="more">Show more</button>` : ''}`;
   if (openRow) { const r = $(`.prow[data-id="${CSS.escape(openRow)}"]`); if (r) openPreview(r); }
 }
-function prowHTML(id) {
-  const it = D.items.get(id); const isOpen = openRow === id; const f = folderById(it.f);
-  const here = f && !it.x && !onInstagram(it, f);
+function prowHTML(id, pageF) {
+  const it = D.items.get(id); const isOpen = openRow === id; const f = pageF || folderById(it.f);
+  const here = f && !it.x && it.f === f.id && !onInstagram(it, f);
   return `<li class="prow" data-id="${esc(id)}" ${isOpen ? 'open' : ''}><button data-act="row" aria-expanded="${isOpen}"><span class="c1">@${esc(it.a || 'unknown')}</span><span class="c2">${it.t === 'r' ? 'Reel' : 'Post'}${it.s ? ' · saved ' + fmtD(it.s) : ''}${here ? ' · <span class="tag">Added here</span>' : ''}</span>${it.n || it.cp ? `<span class="c3">${esc(it.n || it.cp)}</span>` : ''}<span class="chev">${ic('down')}</span></button>${isOpen ? `<div class="pbody"><div class="frame"><div class="wait"><div class="spin"></div><span>Loading…</span></div></div>
 <div class="pacts"><label class="sr" for="mv-${esc(id)}">Move to a collection</label><select class="field" id="mv-${esc(id)}" data-move="${esc(id)}"><option value="">Move to…</option>${D.folders.filter(x => x.id !== it.f).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}${it.f || it.x ? '<option value="_none">Not in a collection</option>' : ''}</select>
 ${it.x ? `<button class="btn sm ghost" data-act="restore" data-id="${esc(id)}">Bring back</button>` : `<button class="btn sm ghost" data-act="rowdont" data-id="${esc(id)}">Don’t need</button>`}<a class="btn sm ghost" href="${esc(appLink(postPath(id, it)))}">Open in Instagram</a></div></div>` : ''}</li>`;
@@ -637,7 +675,7 @@ async function importFiles(files, statusEl) {
   if (backup) { const n = restoreBackup(backup); say(`Restored ${plural(n, 'save')} from your backup.`); Q = null; go('sort'); return; }
   if (!res.saved.length && !res.cols.length) { say(html ? 'This download is in HTML format. Request a new one and choose JSON as the format.' : 'No saved posts in that file. When you request the download, tick Saved.', 'err'); return; }
   // Instagram's collections file decides what's in each collection. Posts you sorted yourself are left alone.
-  const names = [...new Set(res.cols.map(c => c.col))];
+  const names = [...new Set([...(res.colNames || []), ...res.cols.map(c => c.col)])];
   const mem = new Map(); for (const c of res.cols) { if (!c || !c.id) continue; if (!mem.has(c.id)) mem.set(c.id, []); if (!mem.get(c.id).includes(c.col)) mem.get(c.id).push(c.col); }
   let added = 0, removed = 0;
   for (const p of res.saved.concat(res.cols)) {
@@ -708,7 +746,7 @@ const ACT = {
   addlinks: () => addLinks(), backup: () => backup(),
   erase: () => { eraseAsk = true; renderMenu(); }, 'erase-no': () => { eraseAsk = false; renderMenu(); },
   'erase-yes': () => { D.items.clear(); D.folders.length = 0; Q = null; UNDO.length = 0; saveNow(); closeMenu(); toast('Erased'); go(''); },
-  row: el => { const li = el.closest('.prow'); const id = li.dataset.id; openRow = openRow === id ? null : id; const tmp = document.createElement('ul'); tmp.innerHTML = prowHTML(id); li.replaceWith(tmp.firstElementChild); if (openRow) openPreview($(`.prow[data-id="${CSS.escape(id)}"]`)); $$('.prow[open]').forEach(r => { if (r.dataset.id !== openRow) { const t2 = document.createElement('ul'); t2.innerHTML = prowHTML(r.dataset.id); r.replaceWith(t2.firstElementChild); } }); },
+  row: el => { const li = el.closest('.prow'); const id = li.dataset.id; openRow = openRow === id ? null : id; const tmp = document.createElement('ul'); tmp.innerHTML = prowHTML(id, folderById(decodeURIComponent(location.hash.slice(3)))); li.replaceWith(tmp.firstElementChild); if (openRow) openPreview($(`.prow[data-id="${CSS.escape(id)}"]`)); $$('.prow[open]').forEach(r => { if (r.dataset.id !== openRow) { const t2 = document.createElement('ul'); t2.innerHTML = prowHTML(r.dataset.id, folderById(decodeURIComponent(location.hash.slice(3)))); r.replaceWith(t2.firstElementChild); } }); },
   rowdont: el => { const it = D.items.get(el.dataset.id); it.x = 1; save(); toast('Moved to Don’t need'); openRow = null; vFolder(); render(); },
   restore: el => { const it = D.items.get(el.dataset.id); it.x = 0; save(); toast('Brought back'); openRow = null; vFolder(); render(); },
   more: () => { shown += 50; vFolder(); },
