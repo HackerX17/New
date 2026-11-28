@@ -66,7 +66,10 @@ async function artifactRun(browser) {
   await ctx.addInitScript(FAKE_CLAUDE);
   const p = await newPage(ctx, errs, 'phone');
   await p.goto(APP + '#data'); await p.waitForFunction(() => !/Loading/.test(document.querySelector('#savechip').textContent));
-  ok(/Sample data/.test(await txt(p, '#savechip')), 'starts on sample data');
+  ok(/Nothing imported yet/.test(await txt(p, '#savechip')) && /Nothing here yet/.test(await txt(p, '.banner')), 'starts empty: no sample saves');
+  await go(p, 'boards'); ok(!(await p.locator('.btile').count()) && !(await p.locator('[data-act=board-tpl]').count()), 'no ready-made collections or suggested names before you import');
+  await go(p, 'sort'); ok(/Nothing to sort yet/.test(await txt(p, '#stagewrap')), 'Sort says there is nothing to sort yet');
+  await go(p, 'data');
 
   // The picker help appears when a tap doesn't open the file picker
   p.once('filechooser', () => {});
@@ -80,7 +83,7 @@ async function artifactRun(browser) {
   ok(t.includes(`${EXP.liked} liked posts`) && t.includes(`${EXP.following} accounts you follow`) && t.includes(`${EXP.followers} followers`) && t.includes(`${EXP.unfollowed} recently unfollowed`), 'reads likes, following, both follower files and unfollowed');
   await p.click('[data-act=imp-go]');
   t = await txt(p, '#impres');
-  ok(/400 new saves added, 4 collections became boards/.test(t), 'adds saves and turns collections into boards: ' + t);
+  ok(/400 new saves added, 4 collections came in from Instagram/.test(t), 'adds saves and brings in your Instagram collections: ' + t);
   await p.waitForFunction(() => document.querySelector('#savechip').textContent === 'Saved to your account', null, {timeout: 8000}).catch(() => {});
   ok((await txt(p, '#savechip')) === 'Saved to your account', 'saves to the account storage');
   const db = await p.evaluate(() => ({...window.__db, keys: Object.keys(localStorage).filter(k => k.startsWith('fakedb:')).length}));
@@ -89,7 +92,7 @@ async function artifactRun(browser) {
   // Survives a reload
   await p.reload(); await p.waitForFunction(() => !/Loading/.test(document.querySelector('#savechip').textContent));
   await go(p, 'library');
-  ok((await count(p)) === EXP.saved && !(await p.locator('.banner').count()), 'library reloads with all 400 saves and no sample banner');
+  ok((await count(p)) === EXP.saved && !(await p.locator('.banner').count()), 'library reloads with all 400 saves and no banner');
 
   // Library: search, filters, board filter, sorts, layouts
   await p.fill('#q', 'creator.noodle'); ok((await count(p)) > 0 && (await count(p)) < 400, 'search by creator');
@@ -169,7 +172,7 @@ async function artifactRun(browser) {
   await go(p, 'boards'); ok(await p.locator('.rulelist li', {hasText: '@'}).count() >= 1, 'the rule made in Sort mode is listed');
   await p.click('[data-act=board-new]'); await p.fill('#nb-name', 'Date night'); await p.click('[data-act=nb-color][data-c="7"]'); await p.click('#newboard button.btn:not(.ghost)');
   ok(await p.locator('.btile', {hasText: 'Date night'}).count() === 1, 'create a board with a color');
-  await p.click('[data-act=board-tpl] >> text=Travel'); ok(await p.locator('.btile', {hasText: 'Travel'}).count() === 1, 'quick-add board');
+  ok(await p.locator('.btile').count() === 6 && await p.locator('.btile .igbadge', {hasText: 'Made here'}).count() === 2, 'collections list: 4 from Instagram plus 2 you made (marked Made here)');
   await p.click('.btile >> text=Gym'); await p.waitForSelector('.head .back');
   { const h = await txt(p, '.head h1'), c = await count(p); ok(/gym/i.test(h) && c >= 15, `open a board page (heading "${h}", ${c} saves, hash ${await p.evaluate(() => location.hash)})`); }
   await p.click('[data-act=board-edit]'); await p.fill('#be-name', 'Gym and mobility'); await p.click('[data-act=be-color][data-c="2"]'); await p.click('#boardedit button.btn:not(.ghost)'); await p.waitForSelector('.head .back');
@@ -243,7 +246,7 @@ async function artifactRun(browser) {
   ok(backup && JSON.parse(backup.text).items.length === 402, 'download a backup (402 saves)');
   ok(csv && csv.text.split('\n').length === 403 && csv.text.startsWith('url,creator'), 'download a CSV spreadsheet');
   await p.click('[data-act=erase]'); await p.click('[data-act=erase-yes]'); await p.waitForTimeout(500);
-  ok(await p.locator('.banner', {hasText: 'sample'}).count() === 1 && await p.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('fakedb:')).length) === 0, 'erase clears the account storage and shows the sample');
+  ok(await p.locator('.banner', {hasText: 'Nothing here yet'}).count() === 1 && await p.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('fakedb:')).length) === 0, 'erase clears the account storage and starts empty again');
   await p.setInputFiles('#restore', {name: 'savepoint-backup', mimeType: 'application/octet-stream', buffer: Buffer.from(backup.text)}); await p.waitForTimeout(400);
   await go(p, 'library'); ok((await count(p)) === 402, 'restore a backup');
 
@@ -294,18 +297,20 @@ async function standaloneRun(browser) {
 }
 
 async function sprintRun(browser) {
-  console.log('\n== 60-second sprint to the end (sample data, fast clock) ==');
+  console.log('\n== 60-second sprint to the end (fast clock) ==');
   const errs = [];
   const ctx = await browser.newContext({viewport: {width: 1280, height: 900}});
   const p = await newPage(ctx, errs, 'sprint');
+  await p.goto(APP + '#data'); await p.waitForFunction(() => !/Loading/.test(document.querySelector('#savechip').textContent));
+  await p.setInputFiles('#impfile', fileFrom('export.zip')); await p.waitForSelector('[data-act=imp-go]'); await p.click('[data-act=imp-go]');
   await p.clock.install();
-  await p.goto(APP + '#sort'); await p.clock.runFor(1000);
+  await go(p, 'sort'); await p.clock.runFor(1000);
   await p.click('[data-act=smode][data-v=sprint]'); await p.click('[data-act=sprint-start]');
   for (let i = 0; i < 3; i++) { await p.keyboard.press(String(1 + (i % 4))); await p.clock.runFor(400); }
   await p.clock.runFor(61000);
   const r = await txt(p, '#stagewrap');
   ok(/3\s*saves filed/.test(r), 'sprint ends after 60 seconds with the score: ' + r.slice(0, 80));
-  ok(/your best\s*14/i.test(r), 'shows your best score');
+  ok(/your best\s*3/i.test(r), 'shows your best score (this run)');
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await ctx.close();
 }

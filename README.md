@@ -44,7 +44,7 @@ Posts from private accounts, or posts that were deleted, can't show a preview. U
 - **Library**: every saved post and reel, with search, filters (unsorted, reels, posts, 4+ stars, to try, done) and grid or list views. Bulk-select to move, mark done or let go.
 - **Sort mode**: one save at a time. Press `1`–`9` to file into a board, `S` to skip, `L` to let go, `Z` to undo, `O` to open on Instagram. Fast choices build a combo that multiplies XP. There's also a 60-second sprint with a best score.
 - **Creator batching and autopilot rules**: file one post from a creator and Savepoint offers to file all their other saves too, or make a rule so their future saves go there automatically.
-- **Boards**: your own folders, with colors and quick-add templates. Collections you made on Instagram become boards when you import.
+- **Collections**: your Instagram collections come in with their posts. Make new ones any time; they're marked Made here. Nothing is pre-made: before you import, the app is empty.
 - **Item details**: name each save ("what is it?"), tag it, rate it 1–5 stars, and track it as *Want to try*, *In progress* or *Done*.
 - **People**: from your followers and following lists, see who doesn't follow you back, who you don't follow back, mutuals, and creators you save a lot but don't follow. Label accounts and work through a review queue.
 - **Stats**: saves per month, top creators, board sizes, reels vs posts, your busiest month, favorite day to save, night-owl saves, and "on this day" flashbacks.
@@ -101,7 +101,7 @@ node tests/parser.test.js                         # parser, 28 checks
 python3 tests/make_fixtures.py /tmp/fx            # fake Instagram downloads (fictional accounts)
 ./scripts/build.sh
 node tests/site.e2e.js /tmp/fx                    # the website, 53 checks
-node tests/e2e.js /tmp/fx                         # the Claude version, 122 checks
+node tests/e2e.js /tmp/fx                         # the Claude version, 124 checks
 ```
 
 `site.e2e.js` serves the website the way GitHub Pages does. It replaces Instagram with a stand-in embed that reports its height like the real one. It checks:
